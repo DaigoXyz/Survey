@@ -61,6 +61,10 @@ namespace Survey.Data
                 .HasIndex(x => new { x.DocumentId, x.ItemId })
                 .IsUnique();
 
+            modelBuilder.Entity<SurveyHeader>()
+                .HasIndex(x => x.TemplateCode)
+                .IsUnique();
+
             modelBuilder.Entity<DocumentSurveyAnswerOption>(e =>
             {
                 e.HasKey(x => new { x.AnswerId, x.CheckboxOptionId });

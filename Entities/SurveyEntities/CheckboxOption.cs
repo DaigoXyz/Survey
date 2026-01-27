@@ -16,7 +16,6 @@ namespace Survey.Entities.SurveyEntities
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
 
-        // navigation
         public SurveyItem Item { get; set; } = null!;
 
         public ICollection<DocumentSurveyAnswerOption> DocumentSurveyAnswerOptions { get; set; }

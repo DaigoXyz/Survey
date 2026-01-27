@@ -10,12 +10,13 @@ using Survey.Mappers;
 using Survey.Repositories.RoleRepository;
 using Survey.Seeders;
 using Survey.Services.Api;
+using Survey.Services.Survey;
+using Survey.Repositories.IRepositories.ISurveyRepository;
+using Survey.Helpers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.EntityFrameworkCore;
 using System.Text;
-using System.Net.Http.Headers;
-using Microsoft.AspNetCore.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -58,6 +59,10 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IPositionRepository, PositionRepository>();
 builder.Services.AddScoped<IUserRelationRepository, UserRelationRepository>();
+builder.Services.AddScoped<ISurveyHeaderRepository, SurveyHeaderRepository>();
+builder.Services.AddScoped<ISurveyItemRepository, SurveyItemRepository>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<ISurveyTemplateService, SurveyTemplateService>();
 
 builder.Services.AddScoped<IUserMapper, UserMapper>();
 

@@ -10,6 +10,9 @@ namespace Survey.Entities.SurveyEntities
     {
         [Key]
         public int Id { get; set; }
+        [Required]
+        [MaxLength(30)]
+        public string TemplateCode { get; set; } = string.Empty;
         public string TemplateName { get; set; } = string.Empty;
         public int PositionId { get; set; }
         public string Theme { get; set; } = string.Empty;
