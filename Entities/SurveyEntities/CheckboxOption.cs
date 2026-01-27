@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Survey.Entities.DocumentEntities;
 
 namespace Survey.Entities.SurveyEntities
 {
@@ -17,5 +18,8 @@ namespace Survey.Entities.SurveyEntities
 
         // navigation
         public SurveyItem Item { get; set; } = null!;
+
+        public ICollection<DocumentSurveyAnswerOption> DocumentSurveyAnswerOptions { get; set; }
+            = new List<DocumentSurveyAnswerOption>();
     }
 }

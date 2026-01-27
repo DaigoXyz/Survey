@@ -1,0 +1,41 @@
+{
+  "Files": [
+    {
+      "Id": "D:\\Survey\\obj\\Debug\\net8.0\\scopedcss\\projectbundle\\Survey.bundle.scp.css",
+      "PackagePath": "staticwebassets\\Survey.bundle.scp.css"
+    },
+    {
+      "Id": "D:\\Survey\\wwwroot\\app.css",
+      "PackagePath": "staticwebassets\\app.css"
+    },
+    {
+      "Id": "D:\\Survey\\wwwroot\\bootstrap\\bootstrap.min.css",
+      "PackagePath": "staticwebassets\\bootstrap\\bootstrap.min.css"
+    },
+    {
+      "Id": "D:\\Survey\\wwwroot\\bootstrap\\bootstrap.min.css.map",
+      "PackagePath": "staticwebassets\\bootstrap\\bootstrap.min.css.map"
+    },
+    {
+      "Id": "D:\\Survey\\wwwroot\\favicon.png",
+      "PackagePath": "staticwebassets\\favicon.png"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.Survey.Microsoft.AspNetCore.StaticWebAssets.props",
+      "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssets.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.build.Survey.props",
+      "PackagePath": "build\\Survey.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.buildMultiTargeting.Survey.props",
+      "PackagePath": "buildMultiTargeting\\Survey.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.buildTransitive.Survey.props",
+      "PackagePath": "buildTransitive\\Survey.props"
+    }
+  ],
+  "ElementsToRemove": []
+}

@@ -11,6 +11,7 @@ namespace Survey.Data
 {
     public class AppDbContext : DbContext 
     {
+        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options){}
         //User Sections
         public DbSet<User> Users { get; set; } = null!;
         public DbSet<Position> Positions { get; set; } = null!;
@@ -60,8 +61,20 @@ namespace Survey.Data
                 .HasIndex(x => new { x.DocumentId, x.ItemId })
                 .IsUnique();
 
-            modelBuilder.Entity<DocumentSurveyAnswerOption>()
-                .HasKey(x => new { x.AnswerId, x.CheckboxOptionId });
+            modelBuilder.Entity<DocumentSurveyAnswerOption>(e =>
+            {
+                e.HasKey(x => new { x.AnswerId, x.CheckboxOptionId });
+
+                e.HasOne(x => x.Answer)
+                    .WithMany(a => a.DocumentSurveyAnswerOptions)
+                    .HasForeignKey(x => x.AnswerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                e.HasOne(x => x.CheckboxOption)
+                    .WithMany(o => o.DocumentSurveyAnswerOptions)
+                    .HasForeignKey(x => x.CheckboxOptionId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
         }
     }
 }

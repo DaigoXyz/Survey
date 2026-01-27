@@ -11,7 +11,7 @@ namespace Survey.Entities
         [Key]
         public int Id { get; set; }
         public string Username { get; set; } = null!;
-        public string Password { get; set; } = null!;
+        public string PasswordHash { get; set; } = null!;
         public string PositionName { get; set; } = null!; // Raja Iblis, Petani Sawit
         public DateTime CreatedAt { get; set; }
 
