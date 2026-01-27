@@ -1,0 +1,114 @@
+@page "/"
+@rendermode InteractiveServer
+@layout Survey.Components.Layout.AuthLayout
+@using Survey.DTOs.Auth
+@using Survey.Services.Auth
+@using Survey.Services.Api
+@inject IAuthApiService ApiService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Login - Survey System</PageTitle>
+
+<div class="d-flex align-items-center justify-content-center min-vh-100 bg-light">
+    <div class="card shadow" style="width: 100%; max-width: 400px;">
+        <div class="card-body p-4">
+            <div class="text-center mb-4">
+                <div class="d-inline-flex align-items-center justify-center bg-primary rounded p-3 mb-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="white" viewBox="0 0 16 16">
+                        <path
+                            d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z" />
+                    </svg>
+                </div>
+                <h3 class="fw-bold">Survey System</h3>
+                <p class="text-muted mb-0">Silakan masuk untuk melanjutkan</p>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <div class="alert alert-danger d-flex align-items-center" role="alert">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="me-2"
+                        viewBox="0 0 16 16">
+                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z" />
+                        <path
+                            d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z" />
+                    </svg>
+                    <div>@errorMessage</div>
+                </div>
+            }
+
+
+            <EditForm Model="@loginRequest" OnValidSubmit="HandleLogin">
+                <DataAnnotationsValidator />
+
+                <div class="mb-3">
+                    <label for="username" class="form-label fw-semibold">Username</label>
+                    <InputText id="username" class="form-control" @bind-Value="loginRequest.Username"
+                        placeholder="Masukkan username" />
+                    <ValidationMessage For="@(() => loginRequest.Username)" />
+                </div>
+
+                <div class="mb-4">
+                    <label for="password" class="form-label fw-semibold">Password</label>
+                    <InputText id="password" type="password" class="form-control" @bind-Value="loginRequest.Password"
+                        placeholder="Masukkan password" />
+                    <ValidationMessage For="@(() => loginRequest.Password)" />
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100" disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        <span>Memproses...</span>
+                    }
+                    else
+                    {
+                        <span>Masuk</span>
+                    }
+                </button>
+            </EditForm>
+
+            <div class="text-center mt-3">
+                <a href="#" class="text-decoration-none">Lupa password?</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private LoginRequestDto loginRequest = new LoginRequestDto();
+    private string errorMessage = string.Empty;
+    private bool isLoading = false;
+
+    private async Task HandleLogin()
+    {
+        try
+        {
+            errorMessage = string.Empty;
+            isLoading = true;
+
+            var response = await ApiService.LoginAsync(loginRequest);
+
+            // Store token in localStorage
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "accessToken", response.AccessToken);
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "userId", response.UserId.ToString());
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "username", response.Username);
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "role", response.Role);
+
+            // Redirect to master user page
+            Navigation.NavigateTo("/master-user", forceLoad: true);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Terjadi kesalahan. Silakan coba lagi.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

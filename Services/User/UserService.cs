@@ -37,6 +37,11 @@ namespace Survey.Services.User
             _passwordService = passwordService;
         }
 
+        public async Task<List<UserDto>> GetAllUsersAsync()
+        {
+            var users = await _userRepo.GetAllWithRoleAsync();
+            return users.Select(u => _mapper.ToDto(u)).ToList();
+        }
         public async Task<UserDto> CreateUserAsync(int supervisorId, CreateUserDto dto)
         {
             // optional hard-check supervisor valid
@@ -63,7 +68,7 @@ namespace Survey.Services.User
                 CreatedAt = DateTime.UtcNow
             };
 
-            entity.PasswordHash = _passwordService.Hash(dto.Password, entity);
+            entity.PasswordHash = _passwordService.Hash("password", entity);
 
             await _userRepo.AddAsync(entity);
             await _userRepo.SaveChangesAsync();
@@ -88,5 +93,22 @@ namespace Survey.Services.User
             var relations = await _relationRepo.GetBySupervisorIdAsync(supervisorId);
             return relations.Select(r => _mapper.ToDto(r.User)).ToList();
         }
+        
+        public async Task<UserDto> UpdateUserAsync(int supervisorId, UpdateUserDto dto)
+        {
+            var user = await _userRepo.GetByIdWithRoleAsync(dto.Id)
+                ?? throw new KeyNotFoundException("User tidak ditemukan.");
+
+            // optional: validasi supervisor
+            if (user.Id == supervisorId)
+                throw new InvalidOperationException("Tidak bisa mengupdate diri sendiri.");
+
+            user.PositionId = dto.PositionId;
+            user.PositionName = dto.PositionName;
+
+            await _userRepo.SaveChangesAsync();
+            return _mapper.ToDto(user);
+        }
+
     }
 }

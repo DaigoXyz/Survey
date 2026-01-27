@@ -1,0 +1,569 @@
+@page "/master-user"
+@rendermode InteractiveServer
+@using Survey.DTOs.User
+@using System.Net.Http.Headers
+@using System.Net.Http.Json
+@using System.Text.Json
+@using System.ComponentModel.DataAnnotations
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+
+<PageTitle>Master User</PageTitle>
+
+<div class="container-fluid py-3">
+    <div class="mb-3">
+        <span class="text-primary">User</span>
+        <span class="mx-2">→</span>
+        <span>Master User</span>
+    </div>
+
+    <h2 class="mb-3">Master User</h2>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success">@successMessage</div>
+    }
+
+    <div class="card shadow-sm border rounded-3">
+        <div class="card-body p-4">
+
+            <div class="d-flex align-items-center gap-3 mb-4">
+                <div class="bg-info bg-opacity-25 rounded-3 d-flex align-items-center justify-content-center"
+                    style="width:44px;height:44px;">
+                    <i class="bi bi-people" style="font-size:20px;"></i>
+                </div>
+                <h3 class="m-0">User</h3>
+            </div>
+
+            <EditForm Model="@form" OnValidSubmit="HandleSubmit">
+                <DataAnnotationsValidator />
+
+                <div class="row g-4">
+                    <!-- USER ID (readonly) + search modal -->
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">User Id</label>
+                        <div class="input-group">
+                            <InputNumber class="form-control bg-light" @bind-Value="form.UserId" readonly />
+                            <button class="btn btn-primary" type="button" @onclick="OpenUserModal"
+                                disabled="@isLoadingUserList">
+                                @if (isLoadingUserList)
+                                {
+                                    <span class="spinner-border spinner-border-sm"></span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-search"></i>
+                                }
+                            </button>
+                        </div>
+                        <small class="text-muted">Klik search untuk pilih user (mode edit). Untuk create user, biarkan
+                            kosong.</small>
+                    </div>
+
+                    <!-- USERNAME -->
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">User Name</label>
+                        <InputText class="form-control" @bind-Value="form.Username" />
+                        <ValidationMessage For="@(() => form.Username)" />
+                    </div>
+
+                    <!-- POSITION LEVEL -->
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Position Level</label>
+                        <InputSelect class="form-select" @bind-Value="form.PositionId" @onchange="OnPositionChanged">
+                            <option value="0">-- Pilih Position --</option>
+                            @foreach (var pos in positions)
+                            {
+                                <option value="@pos.Id">@pos.Name</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="@(() => form.PositionId)" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Position Name</label>
+                        <InputText class="form-control" @bind-Value="form.PositionName" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Supervisor Id</label>
+                        <div class="input-group">
+                            <InputNumber class="form-control bg-light" @bind-Value="form.SupervisorId"
+                                readonly="true" />
+                            <button class="btn btn-primary" type="button" @onclick="OpenSupervisorModal"
+                                disabled="@(!allowPickSupervisor || isLoadingSupervisorList)">
+                                @if (isLoadingSupervisorList)
+                                {
+                                    <span class="spinner-border spinner-border-sm"></span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-search"></i>
+                                }
+                            </button>
+                        </div>
+                        @if (!allowPickSupervisor)
+                        {
+                            <small class="text-muted">Supervisor otomatis dari user yang login (Opsi A).</small>
+                        }
+                        else
+                        {
+                            <small class="text-muted">Klik search untuk pilih supervisor.</small>
+                        }
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Supervisor Name</label>
+                        <input class="form-control bg-light" value="@supervisorName" readonly />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Supervisor Position Name</label>
+                        <input class="form-control bg-light" value="@supervisorPosition" readonly />
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end mt-4 gap-2">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="ResetForm" disabled="@isSaving">
+                        Reset
+                    </button>
+
+                    <button type="submit" class="btn @(IsEditMode ? "btn-warning" : "btn-success") px-4"
+                        disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            <span>Menyimpan...</span>
+                        }
+                        else
+                        {
+                            <span>@(IsEditMode ? "Update" : "Create")</span>
+                        }
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@if (showUserModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,.5);" @onclick="CloseUserModal">
+        <div class="modal-dialog modal-lg" @onclick:stopPropagation>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Pilih User</h5>
+                    <button type="button" class="btn-close" @onclick="CloseUserModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-flex gap-2 mb-3">
+                        <input class="form-control" placeholder="Cari username..." @bind="userSearch"
+                            @bind:event="oninput" />
+                        <button class="btn btn-outline-secondary" @onclick="ClearUserSearch">Clear</button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th style="width:120px;">Id</th>
+                                    <th>Username</th>
+                                    <th style="width:220px;">Position</th>
+                                    <th style="width:120px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var u in FilterUsers(userList, userSearch))
+                                {
+                                    <tr>
+                                        <td>@u.Id</td>
+                                        <td>@u.Username</td>
+                                        <td>@u.PositionName</td>
+                                        <td class="text-end">
+                                            <button class="btn btn-sm btn-primary" @onclick="() => SelectUser(u)">Pilih</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                        @if (userList.Count == 0)
+                        {
+                            <div class="text-muted">Tidak ada data user.</div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showSupervisorModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,.5);" @onclick="CloseSupervisorModal">
+        <div class="modal-dialog modal-lg" @onclick:stopPropagation>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Pilih Supervisor</h5>
+                    <button type="button" class="btn-close" @onclick="CloseSupervisorModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-flex gap-2 mb-3">
+                        <input class="form-control" placeholder="Cari username..." @bind="supervisorSearch"
+                            @bind:event="oninput" />
+                        <button class="btn btn-outline-secondary" @onclick="ClearSupervisorSearch">Clear</button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th style="width:120px;">Id</th>
+                                    <th>Username</th>
+                                    <th style="width:220px;">Position</th>
+                                    <th style="width:120px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var s in FilterSupervisors(supervisorList, supervisorSearch))
+                                {
+                                    <tr>
+                                        <td>@s.Id</td>
+                                        <td>@s.Username</td>
+                                        <td>@s.PositionName</td>
+                                        <td class="text-end">
+                                            <button class="btn btn-sm btn-primary"
+                                                @onclick="() => SelectSupervisor(s)">Pilih</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                        @if (supervisorList.Count == 0)
+                        {
+                            <div class="text-muted">Tidak ada data supervisor.</div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool allowPickSupervisor = true;
+    private bool IsEditMode => form.UserId.HasValue;
+    private MasterUserForm form = new();
+    private bool isSaving = false;
+    private string errorMessage = "";
+    private string successMessage = "";
+
+    private string supervisorName = "";
+    private string supervisorPosition = "";
+
+    // modal state
+    private bool showUserModal = false;
+    private bool showSupervisorModal = false;
+
+    private bool isLoadingUserList = false;
+    private bool isLoadingSupervisorList = false;
+
+    private string userSearch = "";
+    private string supervisorSearch = "";
+
+    private List<UserDto> userList = new();
+    private List<SuperVisorInfoDto> supervisorList = new();
+
+    private List<PositionOption> positions = new()
+    {
+    new() { Id = 1, Name = "Director" },
+    new() { Id = 2, Name = "Head Department" },
+    new() { Id = 3, Name = "Officer" }
+    };
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        var token = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "accessToken");
+        if (string.IsNullOrEmpty(token))
+        {
+            Navigation.NavigateTo("/login", forceLoad: true);
+            return;
+        }
+
+        Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        // supervisorId dari token -> set otomatis
+        var supervisorId = TryGetUserIdFromJwt(token);
+        if (supervisorId > 0)
+        {
+            form.SupervisorId = supervisorId;
+            await LoadSupervisorInfo(supervisorId);
+        }
+        else
+        {
+            errorMessage = "Gagal membaca SupervisorId dari token. Pastikan claim JWT berisi nameid/sub/id.";
+        }
+
+        SyncPositionName();
+        StateHasChanged();
+    }
+
+    private void OnPositionChanged(ChangeEventArgs _)
+    {
+        SyncPositionName();
+    }
+
+    private void SyncPositionName()
+    {
+        var pos = positions.FirstOrDefault(x => x.Id == form.PositionId);
+        form.PositionName = pos?.Name ?? "";
+    }
+
+    private async Task OpenUserModal()
+    {
+        showUserModal = true;
+
+        if (userList.Count == 0)
+        {
+            await LoadUserList();
+        }
+    }
+
+    private void CloseUserModal()
+    {
+        showUserModal = false;
+    }
+
+    private async Task LoadUserList()
+    {
+        try
+        {
+            isLoadingUserList = true;
+            errorMessage = "";
+
+            var res = await Http.GetFromJsonAsync<List<UserDto>>("api/users/user");
+            userList = res ?? new List<UserDto>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Gagal load list user. ({ex.Message})";
+            userList = new();
+        }
+        finally
+        {
+            isLoadingUserList = false;
+        }
+    }
+
+    private void SelectUser(UserDto u)
+    {
+        form.UserId = u.Id;
+        form.Username = u.Username;
+        form.PositionId = u.PositionId;
+        form.PositionName = u.PositionName;
+        showUserModal = false;
+    }
+
+    private IEnumerable<UserDto> FilterUsers(List<UserDto> list, string q)
+    {
+        if (string.IsNullOrWhiteSpace(q)) return list;
+        q = q.Trim().ToLowerInvariant();
+        return list.Where(x => (x.Username ?? "").ToLowerInvariant().Contains(q));
+    }
+
+    private void ClearUserSearch() => userSearch = "";
+    private async Task OpenSupervisorModal()
+    {
+        if (!allowPickSupervisor) return;
+
+        showSupervisorModal = true;
+        if (supervisorList.Count == 0)
+        {
+            await LoadSupervisorList();
+        }
+    }
+
+    private void CloseSupervisorModal()
+    {
+        showSupervisorModal = false;
+    }
+
+    private async Task LoadSupervisorList()
+    {
+        try
+        {
+            isLoadingSupervisorList = true;
+            errorMessage = "";
+
+            var res = await Http.GetFromJsonAsync<List<SuperVisorInfoDto>>("api/users/supervisors");
+            supervisorList = res ?? new List<SuperVisorInfoDto>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Gagal load list supervisor. ({ex.Message})";
+            supervisorList = new();
+        }
+        finally
+        {
+            isLoadingSupervisorList = false;
+        }
+    }
+
+    private async Task SelectSupervisor(SuperVisorInfoDto s)
+    {
+        form.SupervisorId = s.Id;
+        supervisorName = s.Username;
+        supervisorPosition = s.PositionName;
+        showSupervisorModal = false;
+
+        await Task.CompletedTask;
+    }
+
+    private IEnumerable<SuperVisorInfoDto> FilterSupervisors(List<SuperVisorInfoDto> list, string q)
+    {
+        if (string.IsNullOrWhiteSpace(q)) return list;
+        q = q.Trim().ToLowerInvariant();
+        return list.Where(x => (x.Username ?? "").ToLowerInvariant().Contains(q));
+    }
+
+    private void ClearSupervisorSearch() => supervisorSearch = "";
+
+    private async Task LoadSupervisorInfo(int id)
+    {
+        try
+        {
+            var supervisor = await Http.GetFromJsonAsync<SuperVisorInfoDto>($"api/users/supervisor/{id}");
+            supervisorName = supervisor?.Username ?? "";
+            supervisorPosition = supervisor?.PositionName ?? "";
+        }
+        catch
+        {
+            supervisorName = "";
+            supervisorPosition = "";
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        try
+        {
+            isSaving = true;
+            errorMessage = "";
+            successMessage = "";
+
+            if (IsEditMode)
+            {
+                var dto = new UpdateUserDto
+                {
+                    Id = form.UserId!.Value,
+                    PositionId = form.PositionId,
+                    PositionName = form.PositionName,
+                    SupervisorId = form.SupervisorId
+                };
+
+                var res = await Http.PutAsJsonAsync($"api/users/user/{dto.Id}", dto);
+                res.EnsureSuccessStatusCode();
+
+                successMessage = "User berhasil diupdate.";
+            }
+            else
+            {
+                var dto = new CreateUserDto
+                {
+                    Username = form.Username,
+                    Password = "",
+                    PositionId = form.PositionId,
+                    PositionName = form.PositionName,
+                    SupervisorId = 0
+                };
+
+                var res = await Http.PostAsJsonAsync("api/users/user", dto);
+                res.EnsureSuccessStatusCode();
+
+                successMessage = "User berhasil dibuat.";
+            }
+
+            ResetForm();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void ResetForm()
+    {
+        var keepSupervisor = form.SupervisorId;
+        form = new MasterUserForm { SupervisorId = keepSupervisor };
+        SyncPositionName();
+    }
+
+    private static int TryGetUserIdFromJwt(string jwt)
+    {
+        try
+        {
+            var parts = jwt.Split('.');
+            if (parts.Length < 2) return 0;
+
+            var payloadJson = Base64UrlDecode(parts[1]);
+            using var doc = JsonDocument.Parse(payloadJson);
+            var root = doc.RootElement;
+
+            string? idStr = null;
+
+            if (root.TryGetProperty("nameid", out var nameid)) idStr = nameid.GetString();
+            else if (root.TryGetProperty("sub", out var sub)) idStr = sub.GetString();
+            else if (root.TryGetProperty("id", out var id)) idStr = id.GetString();
+            else if (root.TryGetProperty("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier", out var n2))
+                idStr = n2.GetString();
+
+            return int.TryParse(idStr, out var userId) ? userId : 0;
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+
+    private static string Base64UrlDecode(string input)
+    {
+        input = input.Replace('-', '+').Replace('_', '/');
+        switch (input.Length % 4)
+        {
+            case 2: input += "=="; break;
+            case 3: input += "="; break;
+        }
+        var bytes = Convert.FromBase64String(input);
+        return System.Text.Encoding.UTF8.GetString(bytes);
+    }
+
+    public class MasterUserForm
+    {
+        public int? UserId { get; set; }
+        [Required(ErrorMessage = "Username wajib diisi")]
+        public string Username { get; set; } = "";
+
+        [Range(1, int.MaxValue, ErrorMessage = "Position wajib dipilih")]
+        public int PositionId { get; set; }
+
+        public string PositionName { get; set; } = "";
+
+        public int SupervisorId { get; set; }
+    }
+
+    public class PositionOption
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+    }
+}

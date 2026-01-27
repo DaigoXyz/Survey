@@ -14,6 +14,12 @@ namespace Survey.Repositories
         private readonly AppDbContext _db;
         public UserRepository(AppDbContext db) => _db = db;
 
+        public Task<List<User>> GetAllWithRoleAsync() =>
+            _db.Users
+               .Include(u => u.Role)
+               .OrderBy(u => u.Id)
+               .ToListAsync();
+               
         public Task<User?> GetByUsernameAsync(string username) =>
             _db.Users.Include(x => x.Role).FirstOrDefaultAsync(x => x.Username == username);
 
@@ -23,6 +29,10 @@ namespace Survey.Repositories
         public Task<bool> UsernameExistsAsync(string username) =>
             _db.Users.AnyAsync(x => x.Username == username);
 
+        public Task<List<User>> GetAllSupervisorsAsync() =>
+            _db.Users.Include(u => u.Role)
+                     .Where(u => u.Role.Name == "Supervisor")
+                     .ToListAsync();
         public Task AddAsync(User user) => _db.Users.AddAsync(user).AsTask();
 
         public Task SaveChangesAsync() => _db.SaveChangesAsync();

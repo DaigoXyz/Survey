@@ -9,10 +9,13 @@ using Survey.Mappers.IMappers;
 using Survey.Mappers;
 using Survey.Repositories.RoleRepository;
 using Survey.Seeders;
+using Survey.Services.Api;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.EntityFrameworkCore;
 using System.Text;
+using System.Net.Http.Headers;
+using Microsoft.AspNetCore.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +29,26 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         builder.Configuration.GetConnectionString("DefaultConnection")
     );
 });
+
+builder.Services.AddHttpContextAccessor();
+
+builder.Services.AddScoped(sp =>
+{
+    var accessor = sp.GetRequiredService<IHttpContextAccessor>();
+    var ctx = accessor.HttpContext;
+
+    // base URL dari request aktif
+    var baseUrl = ctx != null
+        ? $"{ctx.Request.Scheme}://{ctx.Request.Host}/"
+        : builder.Configuration["AppBaseUrl"] ?? "https://localhost:5191/";
+
+    return new HttpClient
+    {
+        BaseAddress = new Uri(baseUrl)
+    };
+});
+
+builder.Services.AddScoped<IAuthApiService, AuthApiService>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
@@ -99,6 +122,8 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
+app.UseRouting();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -106,5 +131,6 @@ app.UseAntiforgery();
 
 app.MapControllers();
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
+
 
 app.Run();

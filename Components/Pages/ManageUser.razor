@@ -1,0 +1,322 @@
+@page "/manage-user"
+@rendermode InteractiveServer
+@using Survey.DTOs.User
+@using System.Net.Http.Headers
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+
+<PageTitle>User Management</PageTitle>
+
+<div class="container-fluid py-3">
+    <div class="mb-3">
+        <span class="text-primary">User</span>
+        <span class="mx-2">→</span>
+        <span>User Management</span>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="m-0">User Management</h2>
+        <a href="/master-user" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>Master User
+        </a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = string.Empty"></button>
+        </div>
+    }
+
+    <div class="card shadow-sm border rounded-3">
+        <div class="card-body p-4">
+            <!-- Search & Filter -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" placeholder="Cari username..." @bind="searchQuery"
+                            @bind:event="oninput" />
+                        @if (!string.IsNullOrWhiteSpace(searchQuery))
+                        {
+                            <button class="btn btn-outline-secondary" @onclick="ClearSearch">Clear</button>
+                        }
+                    </div>
+                </div>
+                <div class="col-md-6 text-end">
+                    <button class="btn btn-outline-primary" @onclick="LoadUsers" disabled="@isLoading">
+                        <i class="bi bi-arrow-clockwise me-1"></i>
+                        @if (isLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm"></span>
+                        }
+                        else
+                        {
+                            <span>Refresh</span>
+                        }
+                    </button>
+                </div>
+            </div>
+
+            <!-- Table -->
+            @if (isLoading && users.Count == 0)
+            {
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Memuat data...</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 80px;">ID</th>
+                                <th>Username</th>
+                                <th>Role</th>
+                                <th>Position</th>
+                                <th style="width: 150px;" class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (FilteredUsers.Any())
+                            {
+                                @foreach (var user in FilteredUsers)
+                                {
+                                    <tr>
+                                        <td>@user.Id</td>
+                                        <td>
+                                            <strong>@user.Username</strong>
+                                        </td>
+                                        <td>
+                                            <span class="badge @GetRoleBadgeClass(user.Role)">
+                                                @user.Role
+                                            </span>
+                                        </td>
+                                        <td>@user.PositionName</td>
+                                        <td class="text-center">
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-danger" @onclick="() => ConfirmDelete(user)"
+                                                    title="Delete" disabled="@(user.Role == "Supervisor")">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4">
+                                        @if (string.IsNullOrWhiteSpace(searchQuery))
+                                        {
+                                            <span>Tidak ada data user.</span>
+                                        }
+                                        else
+                                        {
+                                            <span>Tidak ada hasil untuk "@searchQuery"</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                @if (users.Count > 0)
+                {
+                    <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+                        <small class="text-muted">
+                            Menampilkan @FilteredUsers.Count() dari @users.Count user
+                        </small>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+@if (showDeleteModal && userToDelete != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Konfirmasi Hapus</h5>
+                    <button type="button" class="btn-close" @onclick="CancelDelete"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Apakah Anda yakin ingin menghapus user ini?</p>
+                    <div class="alert alert-warning">
+                        <strong>Username:</strong> @userToDelete.Username<br />
+                        <strong>Position:</strong> @userToDelete.PositionName
+                    </div>
+                    <p class="text-danger small mb-0">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        Tindakan ini tidak dapat dibatalkan.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelDelete" disabled="@isDeleting">
+                        Batal
+                    </button>
+                    <button type="button" class="btn btn-danger" @onclick="DeleteUser" disabled="@isDeleting">
+                        @if (isDeleting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                            <span>Menghapus...</span>
+                        }
+                        else
+                        {
+                            <span>Hapus</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<UserDto> users = new();
+    private string searchQuery = "";
+    private bool isLoading = false;
+    private bool isDeleting = false;
+    private string errorMessage = "";
+    private string successMessage = "";
+
+    // Delete modal
+    private bool showDeleteModal = false;
+    private UserDto? userToDelete = null;
+
+    private IEnumerable<UserDto> FilteredUsers
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(searchQuery))
+                return users;
+
+            var query = searchQuery.Trim().ToLowerInvariant();
+            return users.Where(u =>
+            (u.Username ?? "").ToLowerInvariant().Contains(query) ||
+            (u.PositionName ?? "").ToLowerInvariant().Contains(query) ||
+            (u.Role ?? "").ToLowerInvariant().Contains(query)
+            );
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        var token = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "accessToken");
+        if (string.IsNullOrEmpty(token))
+        {
+            Navigation.NavigateTo("/login", forceLoad: true);
+            return;
+        }
+
+        Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        await LoadUsers();
+        StateHasChanged();
+    }
+
+    private async Task LoadUsers()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = "";
+
+            var response = await Http.GetFromJsonAsync<List<UserDto>>("api/users/all");
+            users = response ?? new List<UserDto>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Gagal memuat data user: {ex.Message}";
+            users = new List<UserDto>();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ClearSearch()
+    {
+        searchQuery = "";
+    }
+
+    private void EditUser(UserDto user)
+    {
+        // Navigate to master-user page with query param
+        Navigation.NavigateTo($"/master-user?userId={user.Id}");
+    }
+
+    private void ConfirmDelete(UserDto user)
+    {
+        userToDelete = user;
+        showDeleteModal = true;
+    }
+
+    private void CancelDelete()
+    {
+        userToDelete = null;
+        showDeleteModal = false;
+    }
+
+    private async Task DeleteUser()
+    {
+        if (userToDelete == null) return;
+
+        try
+        {
+            isDeleting = true;
+            errorMessage = "";
+
+            var response = await Http.DeleteAsync($"api/users/user/{userToDelete.Id}");
+            response.EnsureSuccessStatusCode();
+
+            successMessage = $"User {userToDelete.Username} berhasil dihapus.";
+
+            // Remove from list
+            users.Remove(userToDelete);
+
+            CancelDelete();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Gagal menghapus user: {ex.Message}";
+        }
+        finally
+        {
+            isDeleting = false;
+        }
+    }
+
+    private string GetRoleBadgeClass(string role)
+    {
+        return role.ToLowerInvariant() switch
+        {
+            "supervisor" => "bg-primary",
+            "user" => "bg-success",
+            _ => "bg-secondary"
+        };
+    }
+}
