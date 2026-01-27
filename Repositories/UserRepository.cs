@@ -34,7 +34,11 @@ namespace Survey.Repositories
                      .Where(u => u.Role.Name == "Supervisor")
                      .ToListAsync();
         public Task AddAsync(User user) => _db.Users.AddAsync(user).AsTask();
-
+        public Task DeleteAsync(User user)
+        {
+            _db.Users.Remove(user);
+            return Task.CompletedTask;
+        }
         public Task SaveChangesAsync() => _db.SaveChangesAsync();
     }
 }

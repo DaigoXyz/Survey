@@ -1,14 +1,14 @@
 @page "/master-template-survey"
 @page "/master-template-survey/{HeaderId:int}"
 @rendermode InteractiveServer
-@using Survey.DTOs.Survey
-@using Survey.DTOs.User
 @using Survey.Entities.SurveyEntities
-@using System.Net.Http.Headers
-@using System.Net.Http.Json
-@inject HttpClient Http
+@using Survey.Services.Survey
+@inject ISurveyTemplateService SurveyService
+@inject IPositionService PositionService
+@inject IPositionRepository PositionRepo
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
+@inject IHttpContextAccessor HttpContextAccessor
 
 <PageTitle>Master Template Survey</PageTitle>
 
@@ -359,43 +359,40 @@
     {
         if (!firstRender) return;
 
-        var token = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "accessToken");
-        if (string.IsNullOrEmpty(token))
+        // ✅ Cookie auth check (tanpa token)
+        var user = HttpContextAccessor.HttpContext?.User;
+        if (user?.Identity?.IsAuthenticated != true)
         {
-            Navigation.NavigateTo("/login", forceLoad: true);
+            Navigation.NavigateTo("/", forceLoad: true);
             return;
         }
-
-        Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         await LoadPositions();
 
         if (HeaderId.HasValue)
             await LoadHeader(HeaderId.Value);
 
-        StateHasChanged(); 
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task LoadPositions()
     {
         try
         {
-            positions = await Http.GetFromJsonAsync<List<PositionDto>>("api/positions") ?? new();
+            positions = await PositionService.GetAllAsync();
         }
         catch (Exception ex)
         {
-            errorMessage = $"Gagal load positions: {ex.Message}";
+            errorMessage = $"Gagal load position: {ex.Message}";
             positions = new();
         }
-
-        await InvokeAsync(StateHasChanged);
     }
 
     private async Task LoadHeader(int id)
     {
         try
         {
-            var detail = await Http.GetFromJsonAsync<SurveyHeaderDetailDto>($"api/survey-templates/{id}");
+            var detail = await SurveyService.GetDetailAsync(id, CancellationToken.None);
             if (detail != null)
             {
                 headerId = detail.Id;
@@ -403,7 +400,7 @@
                 templateName = detail.TemplateName;
                 positionId = detail.PositionId;
                 theme = detail.Theme;
-                items = detail.Items;
+                items = detail.Items ?? new();
             }
         }
         catch (Exception ex)
@@ -412,10 +409,7 @@
         }
     }
 
-    private void ToggleSurveySection()
-    {
-        isSurveySectionExpanded = !isSurveySectionExpanded;
-    }
+    private void ToggleSurveySection() => isSurveySectionExpanded = !isSurveySectionExpanded;
 
     private void OpenAddItemModal()
     {
@@ -436,7 +430,7 @@
     {
         currentQuestion = item.Question;
         currentType = item.Type.ToString();
-        currentCheckboxOptions = item.CheckboxOptions.Select(o => o.Name).ToList();
+        currentCheckboxOptions = item.CheckboxOptions?.Select(o => o.Name).ToList() ?? new();
         editingItemId = item.Id;
         showItemModal = true;
     }
@@ -450,20 +444,27 @@
         editingItemId = null;
     }
 
-    private void AddCheckboxOption()
-    {
-        currentCheckboxOptions.Add("");
-    }
+    private void AddCheckboxOption() => currentCheckboxOptions.Add("");
 
     private void DeleteCheckboxOption(int index)
     {
-        currentCheckboxOptions.RemoveAt(index);
+        if (index >= 0 && index < currentCheckboxOptions.Count)
+            currentCheckboxOptions.RemoveAt(index);
     }
 
     private async Task SaveItem()
     {
         try
         {
+            errorMessage = "";
+            successMessage = "";
+
+            if (!headerId.HasValue)
+            {
+                errorMessage = "Header belum ada. Simpan header dulu.";
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(currentQuestion))
             {
                 errorMessage = "Question tidak boleh kosong";
@@ -483,7 +484,7 @@
             }
 
             var options = currentType == "Checkbox"
-                            ? currentCheckboxOptions.Where(x => !string.IsNullOrWhiteSpace(x)).ToList()
+            ? currentCheckboxOptions.Where(x => !string.IsNullOrWhiteSpace(x)).ToList()
             : null;
 
             if (currentType == "Checkbox" && (options == null || !options.Any()))
@@ -494,23 +495,19 @@
 
             if (editingItemId.HasValue)
             {
-                // Update existing item
                 var updateDto = new SurveyItemUpdateDto(currentQuestion, questionType, options);
-                var response = await Http.PutAsJsonAsync($"api/survey-templates/items/{editingItemId.Value}", updateDto);
-                response.EnsureSuccessStatusCode();
+                await SurveyService.UpdateItemAsync(editingItemId.Value, updateDto, CancellationToken.None);
+                successMessage = "Item berhasil diupdate";
             }
             else
             {
-                // Add new item
                 var createDto = new SurveyItemCreateDto(currentQuestion, questionType, options);
-                var response = await Http.PostAsJsonAsync($"api/survey-templates/{headerId}/items", createDto);
-                response.EnsureSuccessStatusCode();
+                await SurveyService.AddItemAsync(headerId.Value, createDto, CancellationToken.None);
+                successMessage = "Item berhasil ditambahkan";
             }
 
-            // Reload items
-            await LoadHeader(headerId!.Value);
+            await LoadHeader(headerId.Value);
             CloseItemModal();
-            successMessage = editingItemId.HasValue ? "Item berhasil diupdate" : "Item berhasil ditambahkan";
         }
         catch (Exception ex)
         {
@@ -525,10 +522,14 @@
 
         try
         {
-            var response = await Http.DeleteAsync($"api/survey-templates/items/{itemId}");
-            response.EnsureSuccessStatusCode();
+            errorMessage = "";
+            successMessage = "";
 
-            await LoadHeader(headerId!.Value);
+            await SurveyService.DeleteItemAsync(itemId, CancellationToken.None);
+
+            if (headerId.HasValue)
+                await LoadHeader(headerId.Value);
+
             successMessage = "Item berhasil dihapus";
         }
         catch (Exception ex)
@@ -541,11 +542,14 @@
     {
         try
         {
-            var dto = new ReorderItemDto(itemId, direction);
-            var response = await Http.PostAsJsonAsync($"api/survey-templates/{headerId}/items/reorder", dto);
-            response.EnsureSuccessStatusCode();
+            errorMessage = "";
+            successMessage = "";
 
-            await LoadHeader(headerId!.Value);
+            if (!headerId.HasValue) return;
+
+            await SurveyService.ReorderItemAsync(headerId.Value, new ReorderItemDto(itemId, direction), CancellationToken.None);
+
+            await LoadHeader(headerId.Value);
         }
         catch (Exception ex)
         {
@@ -559,6 +563,7 @@
         {
             isSaving = true;
             errorMessage = "";
+            successMessage = "";
 
             if (string.IsNullOrWhiteSpace(templateName))
             {
@@ -574,27 +579,20 @@
 
             if (headerId.HasValue)
             {
-                // Update header
                 var updateDto = new SurveyHeaderUpdateDto(templateName, positionId, theme);
-                var response = await Http.PutAsJsonAsync($"api/survey-templates/{headerId}", updateDto);
-                response.EnsureSuccessStatusCode();
+                await SurveyService.UpdateHeaderAsync(headerId.Value, updateDto, CancellationToken.None);
                 successMessage = "Template berhasil diupdate";
             }
             else
             {
-                // Create new header
                 var createDto = new SurveyHeaderCreateDto(templateName, positionId, theme);
-                var response = await Http.PostAsJsonAsync("api/survey-templates", createDto);
-                response.EnsureSuccessStatusCode();
+                var created = await SurveyService.CreateHeaderAsync(createDto, CancellationToken.None);
 
-                var created = await response.Content.ReadFromJsonAsync<SurveyHeaderDetailDto>();
-                if (created != null)
-                {
-                    headerId = created.Id;
-                    templateCode = created.TemplateCode;
-                    Navigation.NavigateTo($"/master-template-survey/{created.Id}");
-                }
+                headerId = created.Id;
+                templateCode = created.TemplateCode;
+
                 successMessage = "Template berhasil dibuat";
+                Navigation.NavigateTo($"/master-template-survey/{created.Id}", forceLoad: true);
             }
         }
         catch (Exception ex)
@@ -616,40 +614,35 @@
 
         try
         {
-            var response = await Http.DeleteAsync($"api/survey-templates/{headerId}");
-            response.EnsureSuccessStatusCode();
+            errorMessage = "";
+            successMessage = "";
 
-            Navigation.NavigateTo("/survey-template-list");
+            await SurveyService.DeleteHeaderAsync(headerId.Value, CancellationToken.None);
+
+            Navigation.NavigateTo("/survey-template-list", forceLoad: true);
         }
         catch (Exception ex)
         {
             errorMessage = $"Gagal hapus template: {ex.Message}";
         }
     }
+
     private async Task OpenTemplateModal()
     {
         showTemplateModal = true;
         templateSearch = "";
-        await LoadTemplates(); // load dari API
+        await LoadTemplates();
     }
 
-    private void CloseTemplateModal()
-    {
-        showTemplateModal = false;
-    }
+    private void CloseTemplateModal() => showTemplateModal = false;
 
-    private void ClearTemplateSearch()
-    {
-        templateSearch = "";
-    }
+    private void ClearTemplateSearch() => templateSearch = "";
 
     private async Task LoadTemplates()
     {
         try
         {
-            // pakai endpoint list yang kamu sudah punya: GET api/survey-templates
-            var data = await Http.GetFromJsonAsync<List<SurveyHeaderListDto>>("api/survey-templates");
-            templateList = data ?? new();
+            templateList = await SurveyService.ListAsync(CancellationToken.None);
         }
         catch (Exception ex)
         {
@@ -676,16 +669,12 @@
     private async Task SelectTemplate(SurveyHeaderListDto t)
     {
         CloseTemplateModal();
-
         Navigation.NavigateTo($"/master-template-survey/{t.Id}", forceLoad: true);
-
-        // kalau gak mau forceLoad bisa langsung:
-        // HeaderId = t.Id;
-        // await LoadHeader(t.Id);
+        await Task.CompletedTask;
     }
+
     private void NewTemplate()
     {
-        // reset route + state
         HeaderId = null;
         headerId = null;
 
@@ -702,8 +691,6 @@
         errorMessage = "";
         successMessage = "";
 
-        // balik ke create mode (tanpa id)
         Navigation.NavigateTo("/master-template-survey", forceLoad: true);
     }
-
 }

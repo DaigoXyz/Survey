@@ -1,13 +1,16 @@
 @page "/master-user"
 @rendermode InteractiveServer
-@using Survey.DTOs.User
-@using System.Net.Http.Headers
-@using System.Net.Http.Json
-@using System.Text.Json
+
 @using System.ComponentModel.DataAnnotations
-@inject HttpClient Http
-@inject IJSRuntime JSRuntime
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+
+@inject IUserService UserService
+@inject IUserRepository UserRepo
+@inject IHttpContextAccessor HttpContextAccessor
 @inject NavigationManager Navigation
+@inject IPositionService PositionService
+
 
 <PageTitle>Master User</PageTitle>
 
@@ -276,41 +279,33 @@
 
     private List<UserDto> userList = new();
     private List<SuperVisorInfoDto> supervisorList = new();
-
-    private List<PositionOption> positions = new()
-    {
-    new() { Id = 1, Name = "Director" },
-    new() { Id = 2, Name = "Head Department" },
-    new() { Id = 3, Name = "Officer" }
-    };
+    private List<PositionDto> positions = new();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
 
-        var token = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "accessToken");
-        if (string.IsNullOrEmpty(token))
+        // cookie auth -> ambil dari HttpContext.User
+        var supervisorId = GetLoggedInUserId();
+        if (supervisorId <= 0)
         {
-            Navigation.NavigateTo("/login", forceLoad: true);
+            // belum login / cookie gak kebaca
+            Navigation.NavigateTo("/", forceLoad: true);
             return;
         }
-
-        Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-        // supervisorId dari token -> set otomatis
-        var supervisorId = TryGetUserIdFromJwt(token);
-        if (supervisorId > 0)
-        {
-            form.SupervisorId = supervisorId;
-            await LoadSupervisorInfo(supervisorId);
-        }
-        else
-        {
-            errorMessage = "Gagal membaca SupervisorId dari token. Pastikan claim JWT berisi nameid/sub/id.";
-        }
+        
+        await LoadPositions();
+        form.SupervisorId = supervisorId;
+        await LoadSupervisorInfo(supervisorId);
 
         SyncPositionName();
         StateHasChanged();
+    }
+
+    private int GetLoggedInUserId()
+    {
+        var idStr = HttpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        return int.TryParse(idStr, out var id) ? id : 0;
     }
 
     private void OnPositionChanged(ChangeEventArgs _)
@@ -329,16 +324,24 @@
         showUserModal = true;
 
         if (userList.Count == 0)
-        {
             await LoadUserList();
+    }
+    private async Task LoadPositions()
+    {
+        try
+        {
+            positions = await PositionService.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Gagal load position: {ex.Message}";
+            positions = new();
         }
     }
 
-    private void CloseUserModal()
-    {
-        showUserModal = false;
-    }
+    private void CloseUserModal() => showUserModal = false;
 
+    // ✅ ganti: dulu hit api/users/user -> sekarang panggil service langsung
     private async Task LoadUserList()
     {
         try
@@ -346,8 +349,11 @@
             isLoadingUserList = true;
             errorMessage = "";
 
-            var res = await Http.GetFromJsonAsync<List<UserDto>>("api/users/user");
-            userList = res ?? new List<UserDto>();
+            var supervisorId = GetLoggedInUserId();
+            if (supervisorId <= 0)
+                throw new UnauthorizedAccessException("Session tidak valid.");
+
+            userList = await UserService.GetUserAsync(supervisorId);
         }
         catch (Exception ex)
         {
@@ -377,22 +383,19 @@
     }
 
     private void ClearUserSearch() => userSearch = "";
+
     private async Task OpenSupervisorModal()
     {
         if (!allowPickSupervisor) return;
 
         showSupervisorModal = true;
         if (supervisorList.Count == 0)
-        {
             await LoadSupervisorList();
-        }
     }
 
-    private void CloseSupervisorModal()
-    {
-        showSupervisorModal = false;
-    }
+    private void CloseSupervisorModal() => showSupervisorModal = false;
 
+    // ✅ ganti: dulu hit api/users/supervisors -> sekarang repo langsung
     private async Task LoadSupervisorList()
     {
         try
@@ -400,8 +403,14 @@
             isLoadingSupervisorList = true;
             errorMessage = "";
 
-            var res = await Http.GetFromJsonAsync<List<SuperVisorInfoDto>>("api/users/supervisors");
-            supervisorList = res ?? new List<SuperVisorInfoDto>();
+            var entities = await UserRepo.GetAllSupervisorsAsync();
+            supervisorList = entities.Select(s => new SuperVisorInfoDto
+            {
+                Id = s.Id,
+                Username = s.Username,
+                PositionId = s.PositionId,
+                PositionName = s.PositionName
+            }).ToList();
         }
         catch (Exception ex)
         {
@@ -433,13 +442,14 @@
 
     private void ClearSupervisorSearch() => supervisorSearch = "";
 
+    // ✅ ganti: dulu hit api/users/supervisor/{id} -> sekarang repo langsung
     private async Task LoadSupervisorInfo(int id)
     {
         try
         {
-            var supervisor = await Http.GetFromJsonAsync<SuperVisorInfoDto>($"api/users/supervisor/{id}");
-            supervisorName = supervisor?.Username ?? "";
-            supervisorPosition = supervisor?.PositionName ?? "";
+            var s = await UserRepo.GetByIdWithRoleAsync(id);
+            supervisorName = s?.Username ?? "";
+            supervisorPosition = s?.PositionName ?? "";
         }
         catch
         {
@@ -448,6 +458,7 @@
         }
     }
 
+    // ✅ ganti: dulu Put/Post ke api/users/user -> sekarang service langsung
     private async Task HandleSubmit()
     {
         try
@@ -455,6 +466,10 @@
             isSaving = true;
             errorMessage = "";
             successMessage = "";
+
+            var supervisorId = GetLoggedInUserId();
+            if (supervisorId <= 0)
+                throw new UnauthorizedAccessException("Session tidak valid.");
 
             if (IsEditMode)
             {
@@ -466,9 +481,7 @@
                     SupervisorId = form.SupervisorId
                 };
 
-                var res = await Http.PutAsJsonAsync($"api/users/user/{dto.Id}", dto);
-                res.EnsureSuccessStatusCode();
-
+                await UserService.UpdateUserAsync(supervisorId, dto);
                 successMessage = "User berhasil diupdate.";
             }
             else
@@ -476,15 +489,13 @@
                 var dto = new CreateUserDto
                 {
                     Username = form.Username,
-                    Password = "",
+                    Password = "password",
                     PositionId = form.PositionId,
                     PositionName = form.PositionName,
-                    SupervisorId = 0
+                    SupervisorId = form.SupervisorId
                 };
 
-                var res = await Http.PostAsJsonAsync("api/users/user", dto);
-                res.EnsureSuccessStatusCode();
-
+                await UserService.CreateUserAsync(supervisorId, dto);
                 successMessage = "User berhasil dibuat.";
             }
 
@@ -507,48 +518,10 @@
         SyncPositionName();
     }
 
-    private static int TryGetUserIdFromJwt(string jwt)
-    {
-        try
-        {
-            var parts = jwt.Split('.');
-            if (parts.Length < 2) return 0;
-
-            var payloadJson = Base64UrlDecode(parts[1]);
-            using var doc = JsonDocument.Parse(payloadJson);
-            var root = doc.RootElement;
-
-            string? idStr = null;
-
-            if (root.TryGetProperty("nameid", out var nameid)) idStr = nameid.GetString();
-            else if (root.TryGetProperty("sub", out var sub)) idStr = sub.GetString();
-            else if (root.TryGetProperty("id", out var id)) idStr = id.GetString();
-            else if (root.TryGetProperty("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier", out var n2))
-                idStr = n2.GetString();
-
-            return int.TryParse(idStr, out var userId) ? userId : 0;
-        }
-        catch
-        {
-            return 0;
-        }
-    }
-
-    private static string Base64UrlDecode(string input)
-    {
-        input = input.Replace('-', '+').Replace('_', '/');
-        switch (input.Length % 4)
-        {
-            case 2: input += "=="; break;
-            case 3: input += "="; break;
-        }
-        var bytes = Convert.FromBase64String(input);
-        return System.Text.Encoding.UTF8.GetString(bytes);
-    }
-
     public class MasterUserForm
     {
         public int? UserId { get; set; }
+
         [Required(ErrorMessage = "Username wajib diisi")]
         public string Username { get; set; } = "";
 
@@ -556,13 +529,6 @@
         public int PositionId { get; set; }
 
         public string PositionName { get; set; } = "";
-
         public int SupervisorId { get; set; }
-    }
-
-    public class PositionOption
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = "";
     }
 }

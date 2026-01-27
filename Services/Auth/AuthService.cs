@@ -31,7 +31,8 @@ namespace Survey.Services.Auth
         public async Task<LoginResponseDto> LoginAsync(LoginRequestDto dto)
         {
             var user = await _userRepo.GetByUsernameAsync(dto.Username);
-            if (user is null) throw new UnauthorizedAccessException("Username/Password salah.");
+            if (user is null)
+                throw new UnauthorizedAccessException("Username / Password salah.");
 
             var ok = _passwordService.Verify(
                 user.PasswordHash,
@@ -40,41 +41,14 @@ namespace Survey.Services.Auth
             );
 
             if (!ok)
-                throw new UnauthorizedAccessException("Username / Password salah");
-
-            var token = GenerateJwt(user.Id, user.Username, user.Role.Name);
+                throw new UnauthorizedAccessException("Username / Password salah.");
 
             return new LoginResponseDto
             {
-                AccessToken = token,
                 UserId = user.Id,
                 Username = user.Username,
                 Role = user.Role.Name
             };
-        }
-
-        private string GenerateJwt(int userId, string username, string role)
-        {
-            var jwt = _config.GetSection("Jwt");
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Key"]!));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-            var claims = new[]
-            {
-                new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
-                new Claim(ClaimTypes.Name, username),
-                new Claim(ClaimTypes.Role, role)
-            };
-
-            var token = new JwtSecurityToken(
-                issuer: jwt["Issuer"],
-                audience: jwt["Audience"],
-                claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(int.Parse(jwt["ExpiresMinutes"]!)),
-                signingCredentials: creds
-            );
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
         }
     }
 }

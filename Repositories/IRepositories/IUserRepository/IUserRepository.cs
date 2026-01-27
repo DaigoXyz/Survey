@@ -14,6 +14,7 @@ namespace Survey.Repositories.IRepositories.IUserRepository
         Task<bool> UsernameExistsAsync(string username);
         Task<List<User>> GetAllSupervisorsAsync();
         Task AddAsync(User user);
+        Task DeleteAsync(User user);
         Task SaveChangesAsync();
     }
 }

@@ -8,8 +8,9 @@ namespace Survey.Repositories.IRepositories.IUserRepository
 {
     public interface IUserRelationRepository
     {
+        Task<List<UserRelation>> GetBySupervisorIdAsync(int supervisorId);
+        Task DeleteByUserIdAsync(int userId);
         Task AddAsync(UserRelation relation);
         Task SaveChangesAsync();
-        Task<List<UserRelation>> GetBySupervisorIdAsync(int supervisorId);
     }
 }

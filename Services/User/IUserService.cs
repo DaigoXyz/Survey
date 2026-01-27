@@ -12,5 +12,7 @@ namespace Survey.Services.User
         Task<UserDto> CreateUserAsync(int supervisorId, CreateUserDto dto);
         Task<List<UserDto>> GetUserAsync(int supervisorId);
         Task<UserDto> UpdateUserAsync(int supervisorId, UpdateUserDto dto);
+        Task DeleteUserAsync(int supervisorId, int userId);
+
     }
 }

@@ -14,6 +14,13 @@ namespace Survey.Repositories
             _db = db;
         }
 
+        public Task<List<Position>> GetAllAsync()
+        {
+            return _db.Positions
+                      .OrderBy(p => p.Id)
+                      .ToListAsync();
+        }
+
         public Task<bool> ExistsAsync(int id)
         {
             return _db.Positions.AnyAsync(p => p.Id == id);

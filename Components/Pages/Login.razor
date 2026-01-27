@@ -3,9 +3,10 @@
 @layout Survey.Components.Layout.AuthLayout
 @using Survey.DTOs.Auth
 @using Survey.Services.Auth
-@using Survey.Services.Api
-@inject IAuthApiService ApiService
+@inject Survey.Services.Auth.IAuthService AuthService
 @inject NavigationManager Navigation
+@inject IHttpContextAccessor Ctx
+@inject HttpClient Http
 @inject IJSRuntime JSRuntime
 
 <PageTitle>Login - Survey System</PageTitle>
@@ -38,35 +39,21 @@
             }
 
 
-            <EditForm Model="@loginRequest" OnValidSubmit="HandleLogin">
-                <DataAnnotationsValidator />
-
+            <form method="post" action="/auth/login">
                 <div class="mb-3">
-                    <label for="username" class="form-label fw-semibold">Username</label>
-                    <InputText id="username" class="form-control" @bind-Value="loginRequest.Username"
-                        placeholder="Masukkan username" />
-                    <ValidationMessage For="@(() => loginRequest.Username)" />
+                    <label class="form-label fw-semibold">Username</label>
+                    <input name="Username" class="form-control" />
                 </div>
 
                 <div class="mb-4">
-                    <label for="password" class="form-label fw-semibold">Password</label>
-                    <InputText id="password" type="password" class="form-control" @bind-Value="loginRequest.Password"
-                        placeholder="Masukkan password" />
-                    <ValidationMessage For="@(() => loginRequest.Password)" />
+                    <label class="form-label fw-semibold">Password</label>
+                    <input name="Password" type="password" class="form-control" />
                 </div>
 
-                <button type="submit" class="btn btn-primary w-100" disabled="@isLoading">
-                    @if (isLoading)
-                    {
-                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                        <span>Memproses...</span>
-                    }
-                    else
-                    {
-                        <span>Masuk</span>
-                    }
+                <button type="submit" class="btn btn-primary w-100">
+                    Masuk
                 </button>
-            </EditForm>
+            </form>
 
             <div class="text-center mt-3">
                 <a href="#" class="text-decoration-none">Lupa password?</a>
@@ -74,41 +61,9 @@
         </div>
     </div>
 </div>
-
 @code {
-    private LoginRequestDto loginRequest = new LoginRequestDto();
+    private LoginRequestDto loginRequest = new();
     private string errorMessage = string.Empty;
     private bool isLoading = false;
 
-    private async Task HandleLogin()
-    {
-        try
-        {
-            errorMessage = string.Empty;
-            isLoading = true;
-
-            var response = await ApiService.LoginAsync(loginRequest);
-
-            // Store token in localStorage
-            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "accessToken", response.AccessToken);
-            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "userId", response.UserId.ToString());
-            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "username", response.Username);
-            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "role", response.Role);
-
-            // Redirect to master user page
-            Navigation.NavigateTo("/master-user", forceLoad: true);
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            errorMessage = ex.Message;
-        }
-        catch (Exception ex)
-        {
-            errorMessage = "Terjadi kesalahan. Silakan coba lagi.";
-        }
-        finally
-        {
-            isLoading = false;
-        }
-    }
 }

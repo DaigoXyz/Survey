@@ -109,6 +109,24 @@ namespace Survey.Services.User
             await _userRepo.SaveChangesAsync();
             return _mapper.ToDto(user);
         }
+        public async Task DeleteUserAsync(int supervisorId, int userId)
+        {
+            var supervisor = await _userRepo.GetByIdWithRoleAsync(supervisorId);
+            if (supervisor is null) throw new UnauthorizedAccessException("Supervisor tidak valid.");
+            if (!string.Equals(supervisor.Role.Name, "Supervisor", StringComparison.OrdinalIgnoreCase))
+                throw new UnauthorizedAccessException("Bukan supervisor.");
 
+            var user = await _userRepo.GetByIdWithRoleAsync(userId)
+                ?? throw new KeyNotFoundException("User tidak ditemukan.");
+
+            if (string.Equals(user.Role.Name, "Supervisor", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Tidak boleh menghapus Supervisor.");
+
+            await _relationRepo.DeleteByUserIdAsync(userId);   // kalau belum ada, bilang, nanti aku bikinin
+            await _relationRepo.SaveChangesAsync();
+
+            await _userRepo.DeleteAsync(user);                // kalau belum ada, bilang, nanti aku bikinin
+            await _userRepo.SaveChangesAsync();
+        }
     }
 }

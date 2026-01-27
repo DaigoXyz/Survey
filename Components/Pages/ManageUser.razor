@@ -1,11 +1,11 @@
 @page "/manage-user"
 @rendermode InteractiveServer
+@attribute [Authorize(Roles = "Supervisor")]
 @using Survey.DTOs.User
-@using System.Net.Http.Headers
-@using System.Net.Http.Json
-@inject HttpClient Http
-@inject IJSRuntime JSRuntime
-@inject NavigationManager Navigation
+@using Survey.Services.User
+@inject IUserService UserService
+@inject IHttpContextAccessor HttpContextAccessor
+
 
 <PageTitle>User Management</PageTitle>
 
@@ -201,7 +201,6 @@
     private string errorMessage = "";
     private string successMessage = "";
 
-    // Delete modal
     private bool showDeleteModal = false;
     private UserDto? userToDelete = null;
 
@@ -221,20 +220,15 @@
         }
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (!firstRender) return;
-
-        var token = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "accessToken");
-        if (string.IsNullOrEmpty(token))
-        {
-            Navigation.NavigateTo("/login", forceLoad: true);
-            return;
-        }
-
-        Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         await LoadUsers();
-        StateHasChanged();
+    }
+
+    private int GetLoggedInUserId()
+    {
+        var idStr = HttpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        return int.TryParse(idStr, out var id) ? id : 0;
     }
 
     private async Task LoadUsers()
@@ -244,13 +238,12 @@
             isLoading = true;
             errorMessage = "";
 
-            var response = await Http.GetFromJsonAsync<List<UserDto>>("api/users/all");
-            users = response ?? new List<UserDto>();
+            users = await UserService.GetAllUsersAsync();
         }
         catch (Exception ex)
         {
             errorMessage = $"Gagal memuat data user: {ex.Message}";
-            users = new List<UserDto>();
+            users = new();
         }
         finally
         {
@@ -258,16 +251,7 @@
         }
     }
 
-    private void ClearSearch()
-    {
-        searchQuery = "";
-    }
-
-    private void EditUser(UserDto user)
-    {
-        // Navigate to master-user page with query param
-        Navigation.NavigateTo($"/master-user?userId={user.Id}");
-    }
+    private void ClearSearch() => searchQuery = "";
 
     private void ConfirmDelete(UserDto user)
     {
@@ -290,14 +274,13 @@
             isDeleting = true;
             errorMessage = "";
 
-            var response = await Http.DeleteAsync($"api/users/user/{userToDelete.Id}");
-            response.EnsureSuccessStatusCode();
+            var supervisorId = GetLoggedInUserId();
+            if (supervisorId <= 0) throw new UnauthorizedAccessException("Session tidak valid.");
+
+            await UserService.DeleteUserAsync(supervisorId, userToDelete.Id);
 
             successMessage = $"User {userToDelete.Username} berhasil dihapus.";
-
-            // Remove from list
             users.Remove(userToDelete);
-
             CancelDelete();
         }
         catch (Exception ex)
@@ -312,7 +295,7 @@
 
     private string GetRoleBadgeClass(string role)
     {
-        return role.ToLowerInvariant() switch
+        return (role ?? "").ToLowerInvariant() switch
         {
             "supervisor" => "bg-primary",
             "user" => "bg-success",

@@ -22,5 +22,11 @@ namespace Survey.Repositories
                .Include(r => r.User).ThenInclude(u => u.Role)
                .Where(r => r.SupervisorId == supervisorId)
                .ToListAsync();
+
+        public async Task DeleteByUserIdAsync(int userId)
+        {
+            var rels = await _db.UserRelations.Where(r => r.UserId == userId).ToListAsync();
+            _db.UserRelations.RemoveRange(rels);
+        }
     }
 }
