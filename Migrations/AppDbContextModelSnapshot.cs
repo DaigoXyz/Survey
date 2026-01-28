@@ -45,7 +45,7 @@ namespace Survey.Migrations
                     b.HasIndex("DocumentNo")
                         .IsUnique();
 
-                    b.ToTable("DocumentSurveys");
+                    b.ToTable("DocumentSurveys", (string)null);
                 });
 
             modelBuilder.Entity("Survey.Entities.DocumentEntities.DocumentSurveyAnswer", b =>
@@ -78,7 +78,7 @@ namespace Survey.Migrations
                     b.HasIndex("DocumentId", "ItemId")
                         .IsUnique();
 
-                    b.ToTable("DocumentSurveyAnswers");
+                    b.ToTable("DocumentSurveyAnswers", (string)null);
                 });
 
             modelBuilder.Entity("Survey.Entities.DocumentEntities.DocumentSurveyAnswerOption", b =>
@@ -93,7 +93,7 @@ namespace Survey.Migrations
 
                     b.HasIndex("CheckboxOptionId");
 
-                    b.ToTable("DocumentSurveyAnswerOptions");
+                    b.ToTable("DocumentSurveyAnswerOptions", (string)null);
                 });
 
             modelBuilder.Entity("Survey.Entities.Position", b =>
@@ -113,7 +113,7 @@ namespace Survey.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Positions");
+                    b.ToTable("Positions", (string)null);
                 });
 
             modelBuilder.Entity("Survey.Entities.Role", b =>
@@ -133,7 +133,7 @@ namespace Survey.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Roles");
+                    b.ToTable("Roles", (string)null);
                 });
 
             modelBuilder.Entity("Survey.Entities.SurveyEntities.CheckboxOption", b =>
@@ -161,7 +161,7 @@ namespace Survey.Migrations
 
                     b.HasIndex("ItemId");
 
-                    b.ToTable("CheckboxOptions");
+                    b.ToTable("CheckboxOptions", (string)null);
                 });
 
             modelBuilder.Entity("Survey.Entities.SurveyEntities.SurveyHeader", b =>
@@ -199,7 +199,7 @@ namespace Survey.Migrations
                     b.HasIndex("TemplateCode")
                         .IsUnique();
 
-                    b.ToTable("SurveyHeaders");
+                    b.ToTable("SurveyHeaders", (string)null);
                 });
 
             modelBuilder.Entity("Survey.Entities.SurveyEntities.SurveyItem", b =>
@@ -234,7 +234,7 @@ namespace Survey.Migrations
                     b.HasIndex("HeaderId", "SortOrder")
                         .IsUnique();
 
-                    b.ToTable("SurveyItems");
+                    b.ToTable("SurveyItems", (string)null);
                 });
 
             modelBuilder.Entity("Survey.Entities.User", b =>
@@ -272,7 +272,7 @@ namespace Survey.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("Survey.Entities.UserRelation", b =>
@@ -291,7 +291,7 @@ namespace Survey.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("UserRelations");
+                    b.ToTable("UserRelations", (string)null);
                 });
 
             modelBuilder.Entity("Survey.Entities.DocumentEntities.DocumentSurveyAnswer", b =>

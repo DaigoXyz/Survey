@@ -11,7 +11,10 @@ namespace Survey.Entities.DocumentEntities
         public int AnswerId { get; set; }
         public DocumentSurveyAnswer Answer { get; set; } = null!;
 
-        public int CheckboxOptionId { get; set; }
-        public CheckboxOption CheckboxOption { get; set; } = null!;
+        public int? CheckboxOptionId { get; set; }
+        public CheckboxOption? CheckboxOption { get; set; }
+
+        public string OptionTextSnapshot { get; set; } = string.Empty;
     }
+
 }

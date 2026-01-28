@@ -12,9 +12,12 @@ namespace Survey.Entities.DocumentEntities
 
         public int DocumentId { get; set; }
         public DocumentSurvey Document { get; set; } = null!;
+        public int? ItemId { get; set; }
+        public SurveyItem? Item { get; set; }
 
-        public int ItemId { get; set; }
-        public SurveyItem Item { get; set; } = null!;
+        public string QuestionSnapshot { get; set; } = string.Empty;
+        public QuestionType TypeSnapshot { get; set; }
+        public int SortOrderSnapshot { get; set; }
 
         public string? Answer { get; set; }
 
@@ -24,4 +27,4 @@ namespace Survey.Entities.DocumentEntities
         public ICollection<DocumentSurveyAnswerOption> DocumentSurveyAnswerOptions { get; set; }
             = new List<DocumentSurveyAnswerOption>();
     }
-}   
+}

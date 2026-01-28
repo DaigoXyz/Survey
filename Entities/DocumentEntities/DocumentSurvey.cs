@@ -12,6 +12,8 @@ namespace Survey.Entities.DocumentEntities
         public string DocumentNo { get; set; } = string.Empty;
         public DateTime DocumentDate { get; set; }
         public Status Status { get; set; }
+
+        public ICollection<DocumentSurveyAnswer> Answers { get; set; } = new List<DocumentSurveyAnswer>();
     }
 
     public enum Status
