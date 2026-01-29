@@ -285,11 +285,9 @@
     {
         if (!firstRender) return;
 
-        // cookie auth -> ambil dari HttpContext.User
         var supervisorId = GetLoggedInUserId();
         if (supervisorId <= 0)
         {
-            // belum login / cookie gak kebaca
             Navigation.NavigateTo("/", forceLoad: true);
             return;
         }
@@ -340,8 +338,6 @@
     }
 
     private void CloseUserModal() => showUserModal = false;
-
-    // ✅ ganti: dulu hit api/users/user -> sekarang panggil service langsung
     private async Task LoadUserList()
     {
         try
@@ -395,7 +391,6 @@
 
     private void CloseSupervisorModal() => showSupervisorModal = false;
 
-    // ✅ ganti: dulu hit api/users/supervisors -> sekarang repo langsung
     private async Task LoadSupervisorList()
     {
         try
@@ -442,7 +437,6 @@
 
     private void ClearSupervisorSearch() => supervisorSearch = "";
 
-    // ✅ ganti: dulu hit api/users/supervisor/{id} -> sekarang repo langsung
     private async Task LoadSupervisorInfo(int id)
     {
         try
@@ -458,7 +452,6 @@
         }
     }
 
-    // ✅ ganti: dulu Put/Post ke api/users/user -> sekarang service langsung
     private async Task HandleSubmit()
     {
         try

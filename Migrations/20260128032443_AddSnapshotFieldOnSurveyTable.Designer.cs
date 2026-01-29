@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Survey.Data;
 
@@ -11,9 +12,11 @@ using Survey.Data;
 namespace Survey.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260128032443_AddSnapshotFieldOnSurveyTable")]
+    partial class AddSnapshotFieldOnSurveyTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -30,65 +33,15 @@ namespace Survey.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("CreatedByUserId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("CreatedByUserName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<DateTime>("DocumentDate")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("DocumentNo")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.Property<string>("RequesterEmployeeId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("RequesterEmployeeName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("RequesterPositionLevel")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("RequesterPositionName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
-
-                    b.Property<string>("SupervisorId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("SupervisorName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("TemplateCodeSnapshot")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("TemplateNameSnapshot")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ThemeSnapshot")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
@@ -133,21 +86,17 @@ namespace Survey.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DocumentId");
-
                     b.HasIndex("ItemId");
+
+                    b.HasIndex("DocumentId", "ItemId")
+                        .IsUnique()
+                        .HasFilter("[ItemId] IS NOT NULL");
 
                     b.ToTable("DocumentSurveyAnswers");
                 });
 
             modelBuilder.Entity("Survey.Entities.DocumentEntities.DocumentSurveyAnswerOption", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
                     b.Property<int>("AnswerId")
                         .HasColumnType("int");
 
@@ -158,13 +107,9 @@ namespace Survey.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("Id");
+                    b.HasKey("AnswerId", "CheckboxOptionId");
 
                     b.HasIndex("CheckboxOptionId");
-
-                    b.HasIndex("AnswerId", "CheckboxOptionId")
-                        .IsUnique()
-                        .HasFilter("[CheckboxOptionId] IS NOT NULL");
 
                     b.ToTable("DocumentSurveyAnswerOptions");
                 });
@@ -377,8 +322,7 @@ namespace Survey.Migrations
 
                     b.HasOne("Survey.Entities.SurveyEntities.SurveyItem", "Item")
                         .WithMany()
-                        .HasForeignKey("ItemId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .HasForeignKey("ItemId");
 
                     b.Navigation("Document");
 
@@ -396,7 +340,8 @@ namespace Survey.Migrations
                     b.HasOne("Survey.Entities.SurveyEntities.CheckboxOption", "CheckboxOption")
                         .WithMany("DocumentSurveyAnswerOptions")
                         .HasForeignKey("CheckboxOptionId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("Answer");
 

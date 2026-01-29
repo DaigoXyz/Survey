@@ -12,18 +12,19 @@
 
 <PageTitle>Master Template Survey</PageTitle>
 
-<div class="container-fluid py-3">
-    <div class="mb-3">
-        <a href="#" class="text-primary text-decoration-none">Survey</a>
-        <span class="mx-2">→</span>
-        <span>Master Template Survey</span>
-    </div>
+<div class="container-fluid p-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/survey">Survey</a></li>
+            <li class="breadcrumb-item active">Master Template Survey</li>
+        </ol>
+    </nav>
 
     <h2 class="mb-4">Master Template Survey</h2>
 
     @if (!string.IsNullOrEmpty(errorMessage))
     {
-        <div class="alert alert-danger alert-dismissible">
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
             @errorMessage
             <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
         </div>
@@ -31,26 +32,22 @@
 
     @if (!string.IsNullOrEmpty(successMessage))
     {
-        <div class="alert alert-success alert-dismissible">
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
             @successMessage
             <button type="button" class="btn-close" @onclick="() => successMessage = string.Empty"></button>
         </div>
     }
 
     <!-- Survey Header Card -->
-    <div class="card shadow-sm mb-4 border">
-        <div class="card-body p-4">
-            <div class="d-flex align-items-center gap-3 mb-4">
-                <div class="bg-info bg-opacity-25 rounded-3 p-2">
-                    <i class="bi bi-file-earmark-text fs-4"></i>
-                </div>
-                <h4 class="mb-0">Survey Header</h4>
-            </div>
-
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h6 class="mb-0">Survey Header</h6>
+        </div>
+        <div class="card-body">
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label class="form-label fw-semibold">Survey Template ID</label>
-                    <div class="input-group">
+                    <label class="form-label text-muted small">Survey Template ID</label>
+                    <div class="input-group input-group-sm">
                         <input type="text" class="form-control bg-light" value="@templateCode" readonly />
                         <button class="btn btn-primary" type="button" @onclick="OpenTemplateModal">
                             <i class="bi bi-search"></i>
@@ -60,15 +57,15 @@
                 </div>
 
                 <div class="col-md-6">
-                    <label class="form-label fw-semibold">Survey Template Name</label>
-                    <input type="text" class="form-control" @bind="templateName" placeholder="Template Survey 1" />
+                    <label class="form-label text-muted small">Survey Template Name</label>
+                    <input type="text" class="form-control form-control-sm" @bind="templateName"
+                        placeholder="Template Survey 1" />
                 </div>
 
                 <div class="col-md-6">
-                    <label class="form-label fw-semibold">Position Level</label>
-                    <select class="form-select" @bind="positionId">
+                    <label class="form-label text-muted small">Position Level</label>
+                    <select class="form-select form-select-sm" @bind="positionId">
                         <option value="0">-- Select Position Level --</option>
-
                         @foreach (var p in positions)
                         {
                             <option value="@p.Id">@p.Name</option>
@@ -76,41 +73,39 @@
                     </select>
                 </div>
 
-
                 <div class="col-md-6">
-                    <label class="form-label fw-semibold">Theme</label>
-                    <input type="text" class="form-control" @bind="theme" placeholder="Pengajuan Barang" />
+                    <label class="form-label text-muted small">Theme</label>
+                    <input type="text" class="form-control form-control-sm" @bind="theme"
+                        placeholder="Pengajuan Barang" />
                 </div>
             </div>
         </div>
     </div>
-    <div class="card shadow-sm border">
-        <div class="card-header text-white" style="background-color: #00066f; cursor: pointer;"
-            @onclick="ToggleSurveySection">
-            <div class="d-flex justify-content-between align-items-center py-2">
-                <div class="d-flex align-items-center gap-2">
-                    <i class="bi bi-people fs-5"></i>
-                    <h5 class="mb-0">Survey Pengajuan</h5>
-                </div>
+
+    <!-- Survey Items Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white" role="button" @onclick="ToggleSurveySection">
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Survey Pengajuan</h6>
                 <i class="bi @(isSurveySectionExpanded ? "bi-chevron-up" : "bi-chevron-down")"></i>
             </div>
         </div>
 
         @if (isSurveySectionExpanded)
         {
-            <div class="card-body p-4">
-                <button class="btn btn-sm mb-3" style="background-color: #a2abf0;" @onclick="OpenAddItemModal">
-                    <i class="bi bi-plus-circle me-2"></i>Add New Item
+            <div class="card-body">
+                <button class="btn btn-primary btn-sm mb-3" @onclick="OpenAddItemModal">
+                    <i class="bi bi-plus-circle me-1"></i>Add New Item
                 </button>
 
                 <div class="table-responsive">
-                    <table class="table table-bordered align-middle mb-0">
-                        <thead class="text-white" style="background-color: #00066f;">
+                    <table class="table table-bordered table-hover align-middle mb-0">
+                        <thead class="table-primary">
                             <tr>
                                 <th style="width: 120px;">Action</th>
                                 <th>Question</th>
-                                <th style="width: 200px;">Type</th>
-                                <th style="width: 120px;">Action</th>
+                                <th style="width: 150px;">Type</th>
+                                <th style="width: 100px;">Order</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -120,29 +115,27 @@
                                 {
                                     <tr>
                                         <td>
-                                            <div class="d-flex gap-1">
-                                                <button class="btn btn-sm" style="background-color: lightblue;"
-                                                    @onclick="() => EditItem(item)">
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-primary" @onclick="() => EditItem(item)">
                                                     <i class="bi bi-pencil"></i>
                                                 </button>
-                                                <button class="btn btn-sm" style="background-color: #ffcccc;"
-                                                    @onclick="() => DeleteItem(item.Id)">
+                                                <button class="btn btn-outline-danger" @onclick="() => DeleteItem(item.Id)">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             </div>
                                         </td>
                                         <td>@item.Question</td>
-                                        <td>@item.Type.ToString()</td>
+                                        <td><span class="badge bg-secondary">@item.Type.ToString()</span></td>
                                         <td>
-                                            <div class="d-flex gap-1">
-                                                <button class="btn btn-sm" style="background-color: lightblue;"
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-secondary"
+                                                    @onclick="@(() => ReorderItem(item.Id, "UP"))" disabled="@(index == 0)">
+                                                    <i class="bi bi-chevron-up"></i>
+                                                </button>
+                                                <button class="btn btn-outline-secondary"
                                                     @onclick="@(() => ReorderItem(item.Id, "DOWN"))"
                                                     disabled="@(index == items.Count - 1)">
                                                     <i class="bi bi-chevron-down"></i>
-                                                </button>
-                                                <button class="btn btn-sm" style="background-color: lightblue;"
-                                                    @onclick="@(() => ReorderItem(item.Id, "UP"))" disabled="@(index == 0)">
-                                                    <i class="bi bi-chevron-up"></i>
                                                 </button>
                                             </div>
                                         </td>
@@ -153,6 +146,7 @@
                             {
                                 <tr>
                                     <td colspan="4" class="text-center text-muted py-4">
+                                        <i class="bi bi-inbox me-2"></i>
                                         Belum ada pertanyaan. Klik "Add New Item" untuk menambahkan.
                                     </td>
                                 </tr>
@@ -164,29 +158,35 @@
         }
     </div>
 
-    <div class="d-flex justify-content-end gap-2 mt-4">
-        <button class="btn btn-secondary px-4" @onclick="NewTemplate">
-            <i class="bi bi-plus-circle me-2"></i>New
+    <!-- Action Buttons -->
+    <div class="d-flex justify-content-end gap-2">
+        <button class="btn btn-secondary" @onclick="NewTemplate">
+            <i class="bi bi-plus-circle me-1"></i>New
         </button>
 
-        <button class="btn btn-success px-4" @onclick="HandleSubmit" disabled="@isSaving">
+        <button class="btn btn-success" @onclick="HandleSubmit" disabled="@isSaving">
             @if (isSaving)
             {
-                <span class="spinner-border spinner-border-sm me-2"></span>
+                <span class="spinner-border spinner-border-sm me-1"></span>
             }
-            <i class="bi bi-floppy me-2"></i>Submit
+            else
+            {
+                <i class="bi bi-floppy me-1"></i>
+            }
+            Submit
         </button>
 
-        <button class="btn btn-danger px-4" @onclick="HandleDelete" disabled="@(headerId == null)">
-            <i class="bi bi-trash me-2"></i>Delete
+        <button class="btn btn-danger" @onclick="HandleDelete" disabled="@(headerId == null)">
+            <i class="bi bi-trash me-1"></i>Delete
         </button>
     </div>
 </div>
 
+<!-- Add/Edit Item Modal -->
 @if (showItemModal)
 {
-    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,.5);" @onclick="CloseItemModal">
-        <div class="modal-dialog modal-lg modal-dialog-scrollable" @onclick:stopPropagation>
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">@(editingItemId.HasValue ? "Edit Item" : "Add New Item")</h5>
@@ -194,12 +194,12 @@
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Question</label>
+                        <label class="form-label">Question</label>
                         <input type="text" class="form-control" @bind="currentQuestion" placeholder="Nama Barang" />
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Type</label>
+                        <label class="form-label">Type</label>
                         <select class="form-select" @bind="currentType">
                             <option value="">-- Select Type --</option>
                             <option value="Textbox">Textbox</option>
@@ -209,61 +209,49 @@
                         </select>
                     </div>
 
-                    <!-- Checkbox Items Section (hanya muncul jika Type = Checkbox) -->
                     @if (currentType == "Checkbox")
                     {
-                        <div class="mt-4">
-                            <button class="btn btn-sm btn-primary mb-3" @onclick="AddCheckboxOption">
-                                <i class="bi bi-plus-circle me-2"></i>Add New Item
-                            </button>
-
-                            <div class="table-responsive">
-                                <table class="table table-bordered align-middle">
-                                    <thead class="text-white" style="background-color: #00066f;">
-                                        <tr>
-                                            <th style="width: 100px;">Action</th>
-                                            <th>Item</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @if (currentCheckboxOptions.Any())
-                                        {
-                                            @foreach (var (opt, idx) in currentCheckboxOptions.Select((o, i) => (o, i)))
-                                            {
-                                                <tr>
-                                                    <td>
-                                                        <button class="btn btn-sm" style="background-color: #ffcccc;"
-                                                            @onclick="() => DeleteCheckboxOption(idx)">
-                                                            <i class="bi bi-trash"></i>
-                                                        </button>
-                                                    </td>
-                                                    <td>
-                                                        <input type="text" class="form-control" @bind="currentCheckboxOptions[idx]"
-                                                            placeholder="Item name" />
-                                                    </td>
-                                                </tr>
-                                            }
-                                        }
-                                        else
-                                        {
-                                            <tr>
-                                                <td colspan="2" class="text-center text-muted py-3">
-                                                    Belum ada item. Klik "Add New Item" untuk menambahkan.
-                                                </td>
-                                            </tr>
-                                        }
-                                    </tbody>
-                                </table>
+                        <div class="border rounded p-3 bg-light">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0">Checkbox Options</h6>
+                                <button class="btn btn-primary btn-sm" @onclick="AddCheckboxOption">
+                                    <i class="bi bi-plus-circle me-1"></i>Add Item
+                                </button>
                             </div>
+
+                            @if (currentCheckboxOptions.Any())
+                            {
+                                <div class="list-group">
+                                    @foreach (var (opt, idx) in currentCheckboxOptions.Select((o, i) => (o, i)))
+                                    {
+                                        <div class="list-group-item">
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" class="form-control" @bind="currentCheckboxOptions[idx]"
+                                                    placeholder="Item name" />
+                                                <button class="btn btn-outline-danger" @onclick="() => DeleteCheckboxOption(idx)">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="alert alert-info mb-0">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    Belum ada item. Klik "Add Item" untuk menambahkan.
+                                </div>
+                            }
                         </div>
                     }
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-success" @onclick="SaveItem">
-                        <i class="bi bi-floppy me-2"></i>Save
+                    <button type="button" class="btn btn-secondary" @onclick="CloseItemModal">
+                        <i class="bi bi-x-circle me-1"></i>Cancel
                     </button>
-                    <button type="button" class="btn btn-danger" @onclick="CloseItemModal">
-                        <i class="bi bi-x-circle me-2"></i>Cancel
+                    <button type="button" class="btn btn-success" @onclick="SaveItem">
+                        <i class="bi bi-floppy me-1"></i>Save
                     </button>
                 </div>
             </div>
@@ -271,10 +259,11 @@
     </div>
 }
 
+<!-- Template Selection Modal -->
 @if (showTemplateModal)
 {
-    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,.5);" @onclick="CloseTemplateModal">
-        <div class="modal-dialog modal-lg" @onclick:stopPropagation>
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Pilih Survey Template</h5>
@@ -282,46 +271,53 @@
                 </div>
 
                 <div class="modal-body">
-                    <div class="d-flex gap-2 mb-3">
+                    <div class="input-group mb-3">
                         <input class="form-control" placeholder="Cari template code / name..." @bind="templateSearch"
                             @bind:event="oninput" />
-                        <button class="btn btn-outline-secondary" @onclick="ClearTemplateSearch">Clear</button>
+                        <button class="btn btn-outline-secondary" @onclick="ClearTemplateSearch">
+                            <i class="bi bi-x-circle"></i>
+                        </button>
                     </div>
 
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle">
-                            <thead>
-                                <tr>
-                                    <th style="width:220px;">Template Code</th>
-                                    <th>Template Name</th>
-                                    <th style="width:120px;">Position</th>
-                                    <th style="width:180px;">Theme</th>
-                                    <th style="width:120px;"></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var t in FilterTemplates(templateList, templateSearch))
-                                {
+                    @if (templateList.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
                                     <tr>
-                                        <td>@t.TemplateCode</td>
-                                        <td>@t.TemplateName</td>
-                                        <td>@t.PositionId</td>
-                                        <td>@t.Theme</td>
-                                        <td class="text-end">
-                                            <button class="btn btn-sm btn-primary" @onclick="() => SelectTemplate(t)">
-                                                Pilih
-                                            </button>
-                                        </td>
+                                        <th>Template Code</th>
+                                        <th>Template Name</th>
+                                        <th>Position</th>
+                                        <th>Theme</th>
+                                        <th style="width: 100px;"></th>
                                     </tr>
-                                }
-                            </tbody>
-                        </table>
-
-                        @if (templateList.Count == 0)
-                        {
-                            <div class="text-muted">Tidak ada data template.</div>
-                        }
-                    </div>
+                                </thead>
+                                <tbody>
+                                    @foreach (var t in FilterTemplates(templateList, templateSearch))
+                                    {
+                                        <tr>
+                                            <td>@t.TemplateCode</td>
+                                            <td>@t.TemplateName</td>
+                                            <td>@t.PositionId</td>
+                                            <td>@t.Theme</td>
+                                            <td>
+                                                <button class="btn btn-primary btn-sm w-100" @onclick="() => SelectTemplate(t)">
+                                                    Select
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info mb-0">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Tidak ada data template.
+                        </div>
+                    }
                 </div>
             </div>
         </div>
@@ -359,7 +355,6 @@
     {
         if (!firstRender) return;
 
-        // ✅ Cookie auth check (tanpa token)
         var user = HttpContextAccessor.HttpContext?.User;
         if (user?.Identity?.IsAuthenticated != true)
         {
@@ -484,7 +479,7 @@
             }
 
             var options = currentType == "Checkbox"
-            ? currentCheckboxOptions.Where(x => !string.IsNullOrWhiteSpace(x)).ToList()
+                            ? currentCheckboxOptions.Where(x => !string.IsNullOrWhiteSpace(x)).ToList()
             : null;
 
             if (currentType == "Checkbox" && (options == null || !options.Any()))

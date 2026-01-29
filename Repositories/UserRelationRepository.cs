@@ -28,5 +28,13 @@ namespace Survey.Repositories
             var rels = await _db.UserRelations.Where(r => r.UserId == userId).ToListAsync();
             _db.UserRelations.RemoveRange(rels);
         }
+
+        public Task<UserRelation?> GetByUserIdAsync(int userId) =>
+            _db.UserRelations
+            .Include(r => r.User)
+                .ThenInclude(u => u.Role)
+            .Include(r => r.Supervisor)
+                .ThenInclude(u => u.Role)
+            .FirstOrDefaultAsync(r => r.UserId == userId);
     }
 }

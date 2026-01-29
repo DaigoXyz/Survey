@@ -12,58 +12,45 @@
 <PageTitle>Login - Survey System</PageTitle>
 
 <div class="d-flex align-items-center justify-content-center min-vh-100 bg-light">
-    <div class="card shadow" style="width: 100%; max-width: 400px;">
-        <div class="card-body p-4">
+    <div class="card shadow-sm" style="width: 100%; max-width: 420px;">
+        <div class="card-body p-5">
             <div class="text-center mb-4">
-                <div class="d-inline-flex align-items-center justify-center bg-primary rounded p-3 mb-3">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="white" viewBox="0 0 16 16">
-                        <path
-                            d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z" />
-                    </svg>
-                </div>
-                <h3 class="fw-bold">Survey System</h3>
-                <p class="text-muted mb-0">Silakan masuk untuk melanjutkan</p>
+                <h2 class="fw-bold mb-2">Survey System</h2>
+                <p class="text-muted">Silakan masuk untuk melanjutkan</p>
             </div>
 
             @if (!string.IsNullOrWhiteSpace(errorMessage))
             {
-                <div class="alert alert-danger d-flex align-items-center" role="alert">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="me-2"
-                        viewBox="0 0 16 16">
-                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z" />
-                        <path
-                            d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z" />
-                    </svg>
-                    <div>@errorMessage</div>
+                <div class="alert alert-danger" role="alert">
+                    @errorMessage
                 </div>
             }
 
-
             <form method="post" action="/auth/login">
                 <div class="mb-3">
-                    <label class="form-label fw-semibold">Username</label>
-                    <input name="Username" class="form-control" />
+                    <label class="form-label">Username</label>
+                    <input name="Username" class="form-control" placeholder="Masukkan username" />
                 </div>
 
                 <div class="mb-4">
-                    <label class="form-label fw-semibold">Password</label>
-                    <input name="Password" type="password" class="form-control" />
+                    <label class="form-label">Password</label>
+                    <input name="Password" type="password" class="form-control" placeholder="Masukkan password" />
                 </div>
 
-                <button type="submit" class="btn btn-primary w-100">
+                <button type="submit" class="btn btn-primary w-100 mb-3">
                     Masuk
                 </button>
             </form>
 
-            <div class="text-center mt-3">
+            <div class="text-center">
                 <a href="#" class="text-decoration-none">Lupa password?</a>
             </div>
         </div>
     </div>
 </div>
+
 @code {
     private LoginRequestDto loginRequest = new();
     private string errorMessage = string.Empty;
     private bool isLoading = false;
-
 }

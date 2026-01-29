@@ -23,6 +23,11 @@ namespace Survey.Services.User
                 .Select(p => new PositionDto(p.Id, p.Name))
                 .ToList();
         }
-    }
+        public async Task<string?> GetPositionNameAsync(int positionId)
+        {
+            var pos = await _repo.GetByIdAsync(positionId);
+            return pos?.Name;
+        }
 
+    }
 }

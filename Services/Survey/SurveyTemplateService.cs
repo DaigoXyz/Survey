@@ -32,7 +32,6 @@ namespace Survey.Services.Survey
 
         public async Task<SurveyHeaderDetailDto> CreateHeaderAsync(SurveyHeaderCreateDto dto, CancellationToken ct = default)
         {
-            // minimal safety: retry jika unique TemplateCode bentrok
             const int maxRetry = 3;
 
             for (int attempt = 1; attempt <= maxRetry; attempt++)
@@ -45,7 +44,6 @@ namespace Survey.Services.Survey
                 var nextNumber = 1;
                 if (!string.IsNullOrWhiteSpace(lastCode))
                 {
-                    // lastCode = TEMPLATE/202601/003
                     var lastPart = lastCode.Split('/').Last(); // "003"
                     if (int.TryParse(lastPart, out var n)) nextNumber = n + 1;
                 }
@@ -71,8 +69,6 @@ namespace Survey.Services.Survey
                 }
                 catch (DbUpdateException)
                 {
-                    // kemungkinan unique constraint TemplateCode bentrok
-                    // bersihkan tracking header yang gagal, lalu retry
                     _db.Entry(header).State = EntityState.Detached;
 
                     if (attempt == maxRetry) throw;

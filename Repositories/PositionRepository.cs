@@ -26,6 +26,11 @@ namespace Survey.Repositories
             return _db.Positions.AnyAsync(p => p.Id == id);
         }
 
+        public Task<Position?> GetByIdAsync(int id)
+        {
+            return _db.Positions.FirstOrDefaultAsync(p => p.Id == id);
+        }
+
         public Task<bool> AnyAsync()
         {
             return _db.Positions.AnyAsync();
@@ -33,7 +38,6 @@ namespace Survey.Repositories
 
         public async Task<int> GetAnyIdAsync()
         {
-            // ambil id pertama
             var id = await _db.Positions.Select(p => p.Id).FirstOrDefaultAsync();
             if (id == 0)
                 throw new InvalidOperationException("Tidak ada data Position. Jalankan seeder dulu.");

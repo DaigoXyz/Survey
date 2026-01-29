@@ -9,6 +9,8 @@ namespace Survey.Services.User
     public interface IPositionService
     {
         Task<List<PositionDto>> GetAllAsync();
+        Task<string?> GetPositionNameAsync(int positionId);
+
     }
 
 }

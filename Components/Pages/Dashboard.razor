@@ -1,0 +1,101 @@
+@page "/dashboard"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using Survey.Helpers
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Dashboard - Survey System</PageTitle>
+
+<div class="container-fluid p-4">
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2">Loading user data...</p>
+        </div>
+    }
+    else
+    {
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card bg-primary text-white shadow-sm">
+                    <div class="card-body d-flex align-items-center justify-content-between p-4">
+                        <div>
+                            <h2 class="mb-1">Welcome back, @userName!</h2>
+                            <p class="mb-0 opacity-75">You are logged in as <strong>@userRole</strong></p>
+                        </div>
+                        <div class="d-none d-md-block">
+                            <i class="bi bi-person-badge" style="font-size: 3rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <h6 class="text-muted small text-uppercase fw-bold">User ID</h6>
+                        <h3 class="mb-0">#@userId</h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm h-100 border-start border-4 border-info">
+                    <div class="card-body">
+                        <h6 class="text-muted small text-uppercase fw-bold">Active Status</h6>
+                        <div class="d-flex align-items-center mt-2">
+                            <span class="badge bg-success me-2">Online</span>
+                            <small class="text-muted">Authenticated</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <h6 class="text-muted small text-uppercase fw-bold">Quick Actions</h6>
+                        <div class="d-grid gap-2 mt-2">
+                            <a href="/survey/document" class="btn btn-outline-primary btn-sm">Create New Survey</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthStateTask { get; set; }
+
+    private string userName = "Guest";
+    private string userRole = "None";
+    private int userId = 0;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthStateTask != null)
+        {
+            var authState = await AuthStateTask;
+            var user = authState.User;
+
+            if (user.Identity?.IsAuthenticated ?? false)
+            {
+                userName = user.Identity.Name ?? "Unknown";
+
+                userRole = user.FindFirstValue(ClaimTypes.Role) ?? "No Role";
+
+                userId = AuthClaims.GetUserId(user);
+            }
+        }
+        
+        isLoading = false;
+    }
+}

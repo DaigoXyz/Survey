@@ -7,7 +7,7 @@ using Survey.Repositories.IRepositories.IUserRepository;
 using Survey.Mappers.IMappers;
 using Survey.Entities;
 using Survey.Services.Password;
-using Survey.Services.User;
+using Survey.DTOs.Document;
 using UserEntity = Survey.Entities.User;
 
 namespace Survey.Services.User
@@ -20,6 +20,7 @@ namespace Survey.Services.User
         private readonly IUserRelationRepository _relationRepo;
         private readonly IUserMapper _mapper;
         private readonly IPasswordService _passwordService;
+        private readonly IPositionService _positionService;
 
         public UserService(
             IUserRepository userRepo,
@@ -27,7 +28,9 @@ namespace Survey.Services.User
             IPositionRepository positionRepo,
             IUserRelationRepository relationRepo,
             IUserMapper mapper,
-            IPasswordService passwordService)
+            IPasswordService passwordService,
+            IPositionService positionService
+            )
         {
             _userRepo = userRepo;
             _roleRepo = roleRepo;
@@ -35,6 +38,7 @@ namespace Survey.Services.User
             _relationRepo = relationRepo;
             _mapper = mapper;
             _passwordService = passwordService;
+            _positionService = positionService;
         }
 
         public async Task<List<UserDto>> GetAllUsersAsync()
@@ -44,7 +48,6 @@ namespace Survey.Services.User
         }
         public async Task<UserDto> CreateUserAsync(int supervisorId, CreateUserDto dto)
         {
-            // optional hard-check supervisor valid
             var supervisor = await _userRepo.GetByIdWithRoleAsync(supervisorId);
             if (supervisor is null) throw new UnauthorizedAccessException("Supervisor tidak valid.");
             if (!string.Equals(supervisor.Role.Name, "Supervisor", StringComparison.OrdinalIgnoreCase))
@@ -82,18 +85,40 @@ namespace Survey.Services.User
             await _relationRepo.AddAsync(relation);
             await _relationRepo.SaveChangesAsync();
 
-            // biar Role kebaca di mapper (atau reload)
             var created = await _userRepo.GetByIdWithRoleAsync(entity.Id) ?? entity;
 
             return _mapper.ToDto(created);
         }
-
         public async Task<List<UserDto>> GetUserAsync(int supervisorId)
         {
             var relations = await _relationRepo.GetBySupervisorIdAsync(supervisorId);
             return relations.Select(r => _mapper.ToDto(r.User)).ToList();
         }
-        
+
+        public async Task<RequesterProfileDto> GetRequesterProfileAsync(int userId)
+        {
+            var user = await _userRepo.GetByIdWithRoleAsync(userId)
+                ?? throw new KeyNotFoundException("User tidak ditemukan.");
+
+            var rel = await _relationRepo.GetByUserIdAsync(userId);
+
+            var supervisor = rel?.Supervisor;
+            return new RequesterProfileDto
+            {
+                UserId = user.Id,
+                Username = user.Username,
+
+                EmployeeId = user.Id.ToString(),
+                EmployeeName = user.Username,
+
+                PositionLevel = await _positionService.GetPositionNameAsync(user.PositionId),
+                PositionName = user.PositionName,
+
+                SupervisorId = supervisor?.Id.ToString() ?? "",
+                SupervisorName = supervisor?.Username ?? ""
+            };
+        }
+
         public async Task<UserDto> UpdateUserAsync(int supervisorId, UpdateUserDto dto)
         {
             var user = await _userRepo.GetByIdWithRoleAsync(dto.Id)
@@ -122,10 +147,10 @@ namespace Survey.Services.User
             if (string.Equals(user.Role.Name, "Supervisor", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("Tidak boleh menghapus Supervisor.");
 
-            await _relationRepo.DeleteByUserIdAsync(userId);   // kalau belum ada, bilang, nanti aku bikinin
+            await _relationRepo.DeleteByUserIdAsync(userId);   
             await _relationRepo.SaveChangesAsync();
 
-            await _userRepo.DeleteAsync(user);                // kalau belum ada, bilang, nanti aku bikinin
+            await _userRepo.DeleteAsync(user); 
             await _userRepo.SaveChangesAsync();
         }
     }

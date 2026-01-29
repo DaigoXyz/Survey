@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Survey.Components;
 using Survey.Data;
 using Survey.Repositories;
@@ -12,12 +13,13 @@ using Survey.Mappers;
 using Survey.Mappers.IMappers;
 using Survey.Seeders;
 using Survey.Helpers;
+using Survey.DTOs.Auth;
+using Survey.Services.Document;
+using Survey.Repositories.IRepositories.IDocumentRepository;
 
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
-using Survey.DTOs.Auth;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -67,6 +69,7 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IPasswordService, PasswordService>();
 builder.Services.AddScoped<ISurveyTemplateService, SurveyTemplateService>();
 builder.Services.AddScoped<IPositionService, PositionService>();
+builder.Services.AddScoped<IDocumentSurveyService, DocumentSurveyService>();
 
 // Repositories
 builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -75,6 +78,7 @@ builder.Services.AddScoped<IPositionRepository, PositionRepository>();
 builder.Services.AddScoped<IUserRelationRepository, UserRelationRepository>();
 builder.Services.AddScoped<ISurveyHeaderRepository, SurveyHeaderRepository>();
 builder.Services.AddScoped<ISurveyItemRepository, SurveyItemRepository>();
+builder.Services.AddScoped<IDocumentSurveyRepository, DocumentSurveyRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // Mappers
@@ -121,16 +125,11 @@ app.MapPost("/auth/login", async (HttpContext http, IAuthService auth) =>
     var username = form["Username"].ToString();
     var password = form["Password"].ToString();
 
-    Console.WriteLine("=== LOGIN FORM POST ===");
-    Console.WriteLine($"Username: {username}");
-
     var result = await auth.LoginAsync(new LoginRequestDto
     {
         Username = username,
         Password = password
     });
-
-    Console.WriteLine($"LOGIN OK => {result.UserId} {result.Username} {result.Role}");
 
     var claims = new List<Claim>
     {
@@ -151,8 +150,7 @@ app.MapPost("/auth/login", async (HttpContext http, IAuthService auth) =>
             ExpiresUtc = DateTimeOffset.UtcNow.AddHours(8)
         });
 
-    // Redirect biar browser nge-request page berikutnya dgn cookie yg baru
-    return Results.Redirect("/manage-user");
+    return Results.Redirect("/dashboard");
 });
 
 app.MapPost("/auth/logout", async (HttpContext http) =>

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Survey.Data;
 
@@ -11,9 +12,11 @@ using Survey.Data;
 namespace Survey.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260128033648_AddFieldForRequesterAndCreatedBy")]
+    partial class AddFieldForRequesterAndCreatedBy
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -133,21 +136,17 @@ namespace Survey.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DocumentId");
-
                     b.HasIndex("ItemId");
+
+                    b.HasIndex("DocumentId", "ItemId")
+                        .IsUnique()
+                        .HasFilter("[ItemId] IS NOT NULL");
 
                     b.ToTable("DocumentSurveyAnswers");
                 });
 
             modelBuilder.Entity("Survey.Entities.DocumentEntities.DocumentSurveyAnswerOption", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
                     b.Property<int>("AnswerId")
                         .HasColumnType("int");
 
@@ -158,13 +157,9 @@ namespace Survey.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("Id");
+                    b.HasKey("AnswerId", "CheckboxOptionId");
 
                     b.HasIndex("CheckboxOptionId");
-
-                    b.HasIndex("AnswerId", "CheckboxOptionId")
-                        .IsUnique()
-                        .HasFilter("[CheckboxOptionId] IS NOT NULL");
 
                     b.ToTable("DocumentSurveyAnswerOptions");
                 });
@@ -377,8 +372,7 @@ namespace Survey.Migrations
 
                     b.HasOne("Survey.Entities.SurveyEntities.SurveyItem", "Item")
                         .WithMany()
-                        .HasForeignKey("ItemId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .HasForeignKey("ItemId");
 
                     b.Navigation("Document");
 
@@ -396,7 +390,8 @@ namespace Survey.Migrations
                     b.HasOne("Survey.Entities.SurveyEntities.CheckboxOption", "CheckboxOption")
                         .WithMany("DocumentSurveyAnswerOptions")
                         .HasForeignKey("CheckboxOptionId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("Answer");
 

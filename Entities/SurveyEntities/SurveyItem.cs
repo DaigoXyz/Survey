@@ -21,7 +21,7 @@ namespace Survey.Entities.SurveyEntities
     }
 
     public enum QuestionType
-    {
+    { 
         Textbox = 1,
         Checkbox = 2,
         TextArea = 3,

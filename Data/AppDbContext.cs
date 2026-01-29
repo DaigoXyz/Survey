@@ -57,9 +57,13 @@ namespace Survey.Data
                 .HasIndex(x => x.DocumentNo)
                 .IsUnique();
 
-            modelBuilder.Entity<DocumentSurveyAnswer>()
-                .HasIndex(x => new { x.DocumentId, x.ItemId })
-                .IsUnique();
+            modelBuilder.Entity<DocumentSurveyAnswer>(e =>
+            {
+                e.HasOne(x => x.Item)
+                    .WithMany()
+                    .HasForeignKey(x => x.ItemId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
 
             modelBuilder.Entity<SurveyHeader>()
                 .HasIndex(x => x.TemplateCode)
@@ -67,7 +71,7 @@ namespace Survey.Data
 
             modelBuilder.Entity<DocumentSurveyAnswerOption>(e =>
             {
-                e.HasKey(x => new { x.AnswerId, x.CheckboxOptionId });
+                e.HasKey(x => x.Id);
 
                 e.HasOne(x => x.Answer)
                     .WithMany(a => a.DocumentSurveyAnswerOptions)
@@ -77,7 +81,16 @@ namespace Survey.Data
                 e.HasOne(x => x.CheckboxOption)
                     .WithMany(o => o.DocumentSurveyAnswerOptions)
                     .HasForeignKey(x => x.CheckboxOptionId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                e.HasIndex(x => new { x.AnswerId, x.CheckboxOptionId }).IsUnique();
+            });
+            modelBuilder.Entity<CheckboxOption>(e =>
+            {
+                e.HasOne(x => x.Item)
+                    .WithMany(i => i.CheckboxOptions)
+                    .HasForeignKey(x => x.ItemId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
         }
     }

@@ -8,6 +8,7 @@ namespace Survey.Entities.DocumentEntities
 {
     public class DocumentSurveyAnswerOption
     {
+        public int Id { get; set; }
         public int AnswerId { get; set; }
         public DocumentSurveyAnswer Answer { get; set; } = null!;
 

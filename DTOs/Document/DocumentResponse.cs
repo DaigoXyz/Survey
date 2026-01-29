@@ -12,6 +12,12 @@ namespace Survey.DTOs.Document
         public DateTime DocumentDate { get; set; }
         public int Status { get; set; }  
         public bool IsReadOnly { get; set; }
+        public string RequesterEmployeeId { get; set; } = string.Empty;
+        public string RequesterEmployeeName { get; set; } = string.Empty;
+        public string RequesterPositionLevel { get; set; } = string.Empty;
+        public string RequesterPositionName { get; set; } = string.Empty;
+        public string SupervisorId { get; set; } = string.Empty;
+        public string SupervisorName { get; set; } = string.Empty;
 
         public List<DocumentSurveyAnswerDto> Answers { get; set; } = new();
     }
@@ -19,7 +25,7 @@ namespace Survey.DTOs.Document
     public class DocumentSurveyAnswerDto
     {
         public int AnswerId { get; set; }
-
+        public int ItemId { get; set; }
         public string Question { get; set; } = string.Empty;
         public int Type { get; set; }  
         public int SortOrder { get; set; }

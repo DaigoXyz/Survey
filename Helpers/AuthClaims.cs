@@ -13,5 +13,6 @@ namespace Survey.Helpers
             var idStr = user.FindFirstValue(ClaimTypes.NameIdentifier);
             return int.TryParse(idStr, out var id) ? id : 0;
         }
+        
     }
 }

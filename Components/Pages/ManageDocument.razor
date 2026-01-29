@@ -1,0 +1,291 @@
+@page "/survey/list"
+@rendermode InteractiveServer
+@using Survey.DTOs.Document
+@using Survey.Services.Document
+@using Survey.Entities.DocumentEntities
+@inject IDocumentSurveyService DocumentService
+@inject IHttpContextAccessor HttpContextAccessor
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Document Survey List</PageTitle>
+
+<div class="container-fluid p-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/survey">Survey</a></li>
+            <li class="breadcrumb-item active">Document Survey List</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">Document Survey List</h2>
+        @if (!IsSupervisor)
+        {
+            <a href="/survey/document" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-1"></i>Create New Document
+            </a>
+        }
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = string.Empty"></button>
+        </div>
+    }
+
+    <div class="card">
+        <div class="card-body">
+            <!-- Search & Filter -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" placeholder="Search by document no, requester..." 
+                               @bind="searchQuery" @bind:event="oninput" />
+                        @if (!string.IsNullOrWhiteSpace(searchQuery))
+                        {
+                            <button class="btn btn-outline-secondary" @onclick="ClearSearch">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                        }
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" @bind="filterStatus">
+                        <option value="">All Status</option>
+                        <option value="0">New</option>
+                        <option value="1">Draft</option>
+                        <option value="2">Confirm To Approve</option>
+                        <option value="3">Confirmed</option>
+                    </select>
+                </div>
+                <div class="col-md-3 text-end">
+                    <button class="btn btn-outline-primary" @onclick="LoadDocuments" disabled="@isLoading">
+                        <i class="bi bi-arrow-clockwise me-1"></i>
+                        @if (isLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm"></span>
+                        }
+                        else
+                        {
+                            <span>Refresh</span>
+                        }
+                    </button>
+                </div>
+            </div>
+
+            <!-- Table -->
+            @if (isLoading && documents.Count == 0)
+            {
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Loading data...</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Document No.</th>
+                                <th>Requester ID</th>
+                                <th>Requester Name</th>
+                                <th>Document Date</th>
+                                <th>Status</th>
+                                <th style="width: 120px;" class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (FilteredDocuments.Any())
+                            {
+                                @foreach (var doc in FilteredDocuments)
+                                {
+                                    <tr>
+                                        <td>
+                                            <strong>@doc.DocumentNo</strong>
+                                        </td>
+                                        <td>@doc.RequesterEmployeeId</td>
+                                        <td>@doc.RequesterEmployeeName</td>
+                                        <td>@doc.DocumentDate.ToString("dd/MM/yyyy")</td>
+                                        <td>
+                                            <span class="badge @GetStatusBadgeClass(doc.Status)">
+                                                @GetStatusText(doc.Status)
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <button class="btn btn-outline-primary btn-sm" @onclick="() => ViewDocument(doc.Id)"
+                                                title="View/Edit">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+
+                                            @if (!IsSupervisor)
+                                            {
+                                                <button class="btn btn-outline-danger btn-sm ms-1"
+                                                    @onclick="() => ConfirmDelete(doc.Id)" title="Delete">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">
+                                        @if (string.IsNullOrWhiteSpace(searchQuery) && string.IsNullOrWhiteSpace(filterStatus))
+                                        {
+                                            <i class="bi bi-inbox me-2"></i>
+                                            <span>No documents found.</span>
+                                        }
+                                        else
+                                        {
+                                            <span>No results found for your search criteria.</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                @if (documents.Count > 0)
+                {
+                    <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+                        <small class="text-muted">
+                            Showing @FilteredDocuments.Count() of @documents.Count documents
+                        </small>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private ClaimsPrincipal? User => HttpContextAccessor.HttpContext?.User;
+    private int CurrentUserId => User is null ? 0 : AuthClaims.GetUserId(User);
+    private string CurrentRole => User?.FindFirstValue(ClaimTypes.Role) ?? "";
+    private bool IsSupervisor => CurrentRole.Equals("Supervisor", StringComparison.OrdinalIgnoreCase);
+    private List<DocumentSurveyDto> documents = new();
+    private string searchQuery = "";
+    private string filterStatus = "";
+    private bool isLoading = false;
+    private string errorMessage = "";
+    private string successMessage = "";
+
+    private IEnumerable<DocumentSurveyDto> FilteredDocuments
+    {
+        get
+        {
+            var filtered = documents.AsEnumerable();
+
+            // Filter by search query
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                var query = searchQuery.Trim().ToLowerInvariant();
+                filtered = filtered.Where(d =>
+                    (d.DocumentNo ?? "").ToLowerInvariant().Contains(query) ||
+                    (d.RequesterEmployeeId ?? "").ToLowerInvariant().Contains(query) ||
+                    (d.RequesterEmployeeName ?? "").ToLowerInvariant().Contains(query)
+                );
+            }
+
+            // Filter by status
+            if (!string.IsNullOrWhiteSpace(filterStatus) && int.TryParse(filterStatus, out var status))
+            {
+                filtered = filtered.Where(d => d.Status == status);
+            }
+
+            return filtered;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDocuments();
+    }
+
+    private async Task LoadDocuments()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = "";
+
+            documents = await DocumentService.GetListForCurrentUserAsync(CurrentUserId, CurrentRole);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load documents: {ex.Message}";
+            documents = new();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+    private async Task ConfirmDelete(int documentId)
+    {
+        var ok = await JSRuntime.InvokeAsync<bool>("confirm", "Yakin mau delete document ini?");
+        if (!ok) return;
+
+        try
+        {
+            await DocumentService.DeleteAsync(documentId);
+            successMessage = "Document deleted.";
+            await LoadDocuments();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+    private void ClearSearch()
+    {
+        searchQuery = "";
+    }
+
+    private void ViewDocument(int documentId)
+    {
+        Navigation.NavigateTo($"/survey/document/{documentId}");
+    }
+
+    private string GetStatusBadgeClass(int status)
+    {
+        return status switch
+        {
+            0 => "bg-info text-dark",
+            1 => "bg-secondary",
+            2 => "bg-warning text-dark",
+            3 => "bg-success",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetStatusText(int status)
+    {
+        return status switch
+        {
+            0 => "New",
+            1 => "Draft",
+            2 => "Confirm To Approve",
+            3 => "Confirmed",
+            _ => "Unknown"
+        };
+    }
+}

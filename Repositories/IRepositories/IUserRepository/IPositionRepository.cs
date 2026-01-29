@@ -10,6 +10,7 @@ namespace Survey.Repositories.IRepositories.IUserRepository
     {
         Task<List<Position>> GetAllAsync();
         Task<bool> ExistsAsync(int id);
+        Task<Position?> GetByIdAsync(int id);
         Task<int> GetAnyIdAsync();
         Task<bool> AnyAsync();
         Task AddDefaultAsync();
