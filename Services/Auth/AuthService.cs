@@ -47,7 +47,8 @@ namespace Survey.Services.Auth
             {
                 UserId = user.Id,
                 Username = user.Username,
-                Role = user.Role.Name
+                Role = user.Role.Name,
+                PositionId = user.PositionId
             };
         }
     }

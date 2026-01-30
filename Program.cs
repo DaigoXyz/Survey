@@ -50,7 +50,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     .AddCookie(o =>
     {
         o.LoginPath = "/";
-        o.AccessDeniedPath = "/denied";
+        o.LogoutPath = "/logout";
+        o.AccessDeniedPath = "/dashboard";
         o.SlidingExpiration = true;
         o.ExpireTimeSpan = TimeSpan.FromHours(8);
 
@@ -135,7 +136,8 @@ app.MapPost("/auth/login", async (HttpContext http, IAuthService auth) =>
     {
         new Claim(ClaimTypes.NameIdentifier, result.UserId.ToString()),
         new Claim(ClaimTypes.Name, result.Username),
-        new Claim(ClaimTypes.Role, result.Role)
+        new Claim(ClaimTypes.Role, result.Role),
+        new Claim("PositionId", result.PositionId.ToString())
     };
 
     var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
@@ -153,10 +155,10 @@ app.MapPost("/auth/login", async (HttpContext http, IAuthService auth) =>
     return Results.Redirect("/dashboard");
 });
 
-app.MapPost("/auth/logout", async (HttpContext http) =>
+app.MapGet("/auth/logout", async (HttpContext http) =>
 {
     await http.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-    return Results.Ok(new { ok = true });
+    return Results.Redirect("/");
 });
 
 app.MapRazorComponents<App>()

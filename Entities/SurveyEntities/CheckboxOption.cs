@@ -12,7 +12,7 @@ namespace Survey.Entities.SurveyEntities
 
         public int ItemId { get; set; }
         public string Name { get; set; } = null!;
-
+        public bool IsOther { get; set; } = false;
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
 

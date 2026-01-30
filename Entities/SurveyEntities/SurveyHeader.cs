@@ -16,7 +16,7 @@ namespace Survey.Entities.SurveyEntities
         public string TemplateName { get; set; } = string.Empty;
         public int PositionId { get; set; }
         public string Theme { get; set; } = string.Empty;
-
+        public int StructuralVersion { get; set; } = 1;
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
         public ICollection<SurveyItem> Items { get; set; } = new List<SurveyItem>();

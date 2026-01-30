@@ -27,7 +27,8 @@ namespace Survey.Entities.DocumentEntities
         public string SupervisorId { get; set; } = string.Empty;
 
         public string SupervisorName { get; set; } = string.Empty;
-
+        public int TemplateHeaderId { get; set; }
+        public int StructuralVersionSnapshot { get; set; }
         public string TemplateCodeSnapshot { get; set; } = string.Empty;
         public string TemplateNameSnapshot { get; set; } = string.Empty;
 

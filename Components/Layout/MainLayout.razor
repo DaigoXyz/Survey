@@ -1,4 +1,6 @@
 ﻿@inherits LayoutComponentBase
+@inject IJSRuntime JS
+@inject NavigationManager Nav
 
 <div class="page">
     <div class="sidebar">
@@ -6,8 +8,11 @@
     </div>
 
     <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+        <div class="top-row px-4 d-flex justify-content-end">
+            <button type="button" class="btn btn-link text-danger fw-bold text-decoration-none p-0"
+                @onclick="() => HandleLogout()">
+                <i class="bi bi-box-arrow-right"></i> Logout
+            </button>
         </div>
 
         <article class="content px-4">
@@ -16,8 +21,14 @@
     </main>
 </div>
 
-<div id="blazor-error-ui">
-    An unhandled error has occurred.
-    <a href="" class="reload">Reload</a>
-    <a class="dismiss">🗙</a>
-</div>
+@code {
+    private async Task HandleLogout()
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to logout?");
+
+        if (confirmed)
+        {
+            Nav.NavigateTo("/logout", forceLoad: true);
+        }
+    }
+}

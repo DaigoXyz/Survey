@@ -29,6 +29,12 @@ namespace Survey.Services.Survey
             _itemRepo = itemRepo;
             _uow = uow;
         }
+        private async Task TouchStructuralAsync(int headerId, CancellationToken ct)
+        {
+            var header = await _db.SurveyHeaders.FirstAsync(h => h.Id == headerId, ct);
+            header.StructuralVersion = header.StructuralVersion <= 0 ? 1 : header.StructuralVersion + 1;
+            header.UpdatedAt = DateTime.UtcNow;
+        }
 
         public async Task<SurveyHeaderDetailDto> CreateHeaderAsync(SurveyHeaderCreateDto dto, CancellationToken ct = default)
         {
@@ -44,7 +50,7 @@ namespace Survey.Services.Survey
                 var nextNumber = 1;
                 if (!string.IsNullOrWhiteSpace(lastCode))
                 {
-                    var lastPart = lastCode.Split('/').Last(); // "003"
+                    var lastPart = lastCode.Split('/').Last();
                     if (int.TryParse(lastPart, out var n)) nextNumber = n + 1;
                 }
 
@@ -57,7 +63,8 @@ namespace Survey.Services.Survey
                     PositionId = dto.PositionId,
                     Theme = dto.Theme,
                     CreatedAt = now,
-                    UpdatedAt = now
+                    UpdatedAt = now,
+                    StructuralVersion = 1
                 };
 
                 await _headerRepo.AddAsync(header, ct);
@@ -70,7 +77,6 @@ namespace Survey.Services.Survey
                 catch (DbUpdateException)
                 {
                     _db.Entry(header).State = EntityState.Detached;
-
                     if (attempt == maxRetry) throw;
                 }
             }
@@ -103,7 +109,7 @@ namespace Survey.Services.Survey
                     i.Question,
                     i.type,
                     i.SortOrder,
-                    i.CheckboxOptions.Select(o => new CheckboxOptionDto(o.Id, o.Name)).ToList()
+                    i.CheckboxOptions.Select(o => new CheckboxOptionDto(o.Id, o.Name, o.IsOther)).ToList()
                 )).ToList()
             );
         }
@@ -160,6 +166,9 @@ namespace Survey.Services.Survey
             }
 
             _db.SurveyItems.Add(item);
+
+            await TouchStructuralAsync(headerId, ct);
+
             await _uow.SaveChangesAsync(ct);
 
             var loaded = await _itemRepo.GetByIdAsync(item.Id, includeOptions: true, ct);
@@ -171,7 +180,7 @@ namespace Survey.Services.Survey
                 loaded.Question,
                 loaded.type,
                 loaded.SortOrder,
-                loaded.CheckboxOptions.Select(o => new CheckboxOptionDto(o.Id, o.Name)).ToList()
+                loaded.CheckboxOptions.Select(o => new CheckboxOptionDto(o.Id, o.Name, o.IsOther)).ToList()
             );
         }
 
@@ -181,6 +190,7 @@ namespace Survey.Services.Survey
             if (item is null) throw new KeyNotFoundException("Survey item not found");
 
             var now = DateTime.UtcNow;
+
             item.Question = dto.Question;
             item.type = dto.Type;
             item.UpdatedAt = now;
@@ -207,15 +217,19 @@ namespace Survey.Services.Survey
                 }).ToList();
             }
 
+            await TouchStructuralAsync(item.HeaderId, ct);
+
             await _uow.SaveChangesAsync(ct);
         }
-
         public async Task DeleteItemAsync(int itemId, CancellationToken ct = default)
         {
             var item = await _itemRepo.GetByIdAsync(itemId, false, ct);
             if (item is null) return;
 
             _db.SurveyItems.Remove(item);
+
+            await TouchStructuralAsync(item.HeaderId, ct);
+
             await _uow.SaveChangesAsync(ct);
 
             await NormalizeSortOrderAsync(item.HeaderId, ct);

@@ -1,7 +1,6 @@
 @page "/survey/document"
 @page "/survey/document/{DocumentId:int}"
 @rendermode InteractiveServer
-
 @using Survey.DTOs.Document
 @using Survey.Services.Document
 @using Survey.Entities.DocumentEntities
@@ -49,6 +48,38 @@
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 @successMessage
                 <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+            </div>
+        }
+
+        @if (document != null && !IsSupervisor && (document.Status == 1 || document.Status == 0) &&
+            document.HasTemplateUpdate && !ignoreTemplateUpdate)
+        {
+            <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <h6 class="alert-heading mb-2">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>Template Survey Sudah Berubah
+                        </h6>
+                        <p class="mb-2">
+                            Template survey ini telah diupdate oleh pembuat template, mungkin ada beberapa perubahan pada pertanyaan.
+                        </p>
+                        <div class="small text-muted mb-0">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Anda dapat mengupdate dokumen ini untuk mendapatkan pertanyaan terbaru dari template,
+                            atau tetap menggunakan template lama.
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" @onclick="UseOldTemplate"></button>
+                </div>
+                <hr class="my-3" />
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary btn-sm" @onclick="UseOldTemplate" disabled="@isSaving">
+                        <i class="bi bi-x-circle me-1"></i>Pakai Template Lama
+                    </button>
+                    <button class="btn btn-warning btn-sm" @onclick="OpenTemplateUpdateModal" disabled="@isSaving">
+                        <i class="bi bi-arrow-repeat me-1"></i>Update ke Template Baru
+                    </button>
+                </div>
             </div>
         }
 
@@ -141,7 +172,7 @@
                 <div class="card-body">
                     @if (document == null)
                     {
-                        <!-- Template Selection -->
+                        <!-- Template Selection (New Document) -->
                         <div class="border rounded p-3 bg-light mb-4">
                             <div class="row g-3">
                                 <div class="col-md-6">
@@ -164,6 +195,28 @@
                                     <label class="form-label small fw-semibold">Theme</label>
                                     <input type="text" class="form-control form-control-sm bg-white"
                                         value="@(selectedTemplate?.Theme ?? "")" readonly />
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="border rounded p-3 bg-light mb-4">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-semibold">Survey Template ID</label>
+                                    <input type="text" class="form-control form-control-sm bg-white" value="@document!.TemplateCode"
+                                        readonly />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-semibold">Survey Template Name</label>
+                                    <input type="text" class="form-control form-control-sm bg-white" value="@document!.TemplateName"
+                                        readonly />
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label small fw-semibold">Theme</label>
+                                    <input type="text" class="form-control form-control-sm bg-white" value="@document!.Theme"
+                                        readonly />
                                 </div>
                             </div>
                         </div>
@@ -193,19 +246,26 @@
                                     }
                                     else if (answer.Type == (int)QuestionType.Checkbox)
                                     {
-                                        if (CanEdit)
+                                        @if (CanEdit)
                                         {
                                             @foreach (var option in answer.Options)
                                             {
                                                 var isChecked = answer.SelectedOptionIds.Contains(option.Id);
+
                                                 <div class="form-check">
                                                     <input class="form-check-input" type="checkbox" id="@($"check_{answer.AnswerId}_{option.Id}")"
                                                         checked="@isChecked"
                                                         @onchange="@(e => UpdateCheckbox(answer.AnswerId, option.Id, (bool)e.Value!))" />
-                                                    <label class="form-check-label" for="@($"check_{answer.AnswerId}_{option.Id}")">
+                                                    <label class="form-check-label" for="@($"preview_check_{answer.ItemId}_{option.Id}")">
                                                         @option.Text
                                                     </label>
                                                 </div>
+
+                                                @if (option.IsOther && isChecked)
+                                                {
+                                                    <input class="form-control form-control-sm mt-2" placeholder="Isi lainnya..."
+                                                        @bind-value="answer.OtherText" @bind-value:event="oninput" />
+                                                }
                                             }
                                         }
                                         else
@@ -263,6 +323,11 @@
                                                     @option.Text
                                                 </label>
                                             </div>
+                                            @if (option.IsOther && isChecked)
+                                            {
+                                                <input class="form-control form-control-sm mt-2" placeholder="Isi lainnya..."
+                                                    @bind-value="answer.OtherText" @bind-value:event="oninput" />
+                                            }
                                         }
                                     }
                                 </div>
@@ -285,14 +350,42 @@
                 <i class="bi bi-arrow-left me-1"></i> Back to List
             </button>
 
-            @if (!IsSupervisor && (selectedTemplateId != null || (document != null && document.Status != 3)))
+            @if (!IsSupervisor && (selectedTemplateId != null || (document != null && document.Status != 3 && document.Status != 2)))
             {
-                <button class="btn btn-success" @onclick="SaveDraft" disabled="@isSaving">Save Draft</button>
-                <button class="btn btn-primary" @onclick="Submit" disabled="@isSaving">Submit</button>
+                <button class="btn btn-success" @onclick="SaveDraft" disabled="@isSaving">
+                    @if (isSaving)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-save me-1"></i>
+                    }
+                    Save Draft
+                </button>
+                <button class="btn btn-primary" @onclick="Submit" disabled="@isSaving">
+                    @if (isSaving)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-send me-1"></i>
+                    }
+                    Submit
+                </button>
             }
             @if (IsSupervisor && document != null && document.Status == 2)
             {
                 <button class="btn btn-success" @onclick="Approve" disabled="@isSaving">
+                    @if (isSaving)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-check-circle me-1"></i>
+                    }
                     Approve
                 </button>
             }
@@ -350,6 +443,54 @@
     </div>
 }
 
+@if (showTemplateUpdateModal && document != null)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>Template Survey Berubah
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="() => showTemplateUpdateModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-3">
+                        Template untuk dokumen ini sudah berubah sejak dokumen dibuat.
+                    </p>
+
+                    <div class="alert alert-info mb-0">
+                        <h6 class="alert-heading">
+                            <i class="bi bi-info-circle me-2"></i>Apa yang terjadi jika update?
+                        </h6>
+                        <ul class="mb-0 small">
+                            <li>Pertanyaan baru dari template akan ditambahkan ke dokumen</li>
+                            <li>Jawaban yang sudah ada akan tetap tersimpan</li>
+                            <li>Urutan pertanyaan akan diperbarui sesuai template terbaru</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" @onclick="UseOldTemplate" disabled="@isSaving">
+                        <i class="bi bi-x-circle me-1"></i>Pakai Template Lama
+                    </button>
+                    <button class="btn btn-warning" @onclick="UseLatestTemplate" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-arrow-repeat me-1"></i>
+                        }
+                        Update ke Template Baru
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     [Parameter] public int? DocumentId { get; set; }
     private bool CanEdit => document != null && !document.IsReadOnly && !IsSupervisor;
@@ -358,7 +499,8 @@
     private bool IsSupervisor => CurrentRole.Equals("Supervisor", StringComparison.OrdinalIgnoreCase);
     private DocumentSurveyDto? document;
     private DocumentSurveyPreviewDto? preview;
-
+    private bool showTemplateUpdateModal = false;
+    private bool ignoreTemplateUpdate = false;
     private bool isLoading = true;
     private bool isSaving = false;
     private bool surveySectionExpanded = true;
@@ -503,6 +645,7 @@
         t.Theme.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)
         ).ToList();
     }
+
     private void UpdateCheckbox(int answerId, int optionId, bool isChecked)
     {
         var ans = document?.Answers.FirstOrDefault(x => x.AnswerId == answerId);
@@ -518,6 +661,7 @@
             ans.SelectedOptionIds.Remove(optionId);
         }
     }
+
     private void UpdatePreviewCheckbox(int itemId, int optionId, bool isChecked)
     {
         var ans = preview?.Answers.FirstOrDefault(x => x.ItemId == itemId);
@@ -534,47 +678,6 @@
         }
     }
 
-    private async Task CreateDocument()
-    {
-        if (!selectedTemplateId.HasValue) return;
-
-        isSaving = true;
-        errorMessage = string.Empty;
-        successMessage = null;
-
-        try
-        {
-            var req = new DocumentSurveyCreateRequestDto
-            {
-                DocumentNo = await DocumentService.GenerateDocumentNoAsync(),
-                DocumentDate = DateTime.Now,
-                TemplateHeaderId = selectedTemplateId.Value,
-
-                CreatedByUserId = currentUser?.UserId ?? 0,
-                CreatedByUserName = currentUser?.Username ?? "User",
-
-                RequesterEmployeeId = employeeInfo.EmployeeId,
-                RequesterEmployeeName = employeeInfo.EmployeeName,
-                RequesterPositionLevel = employeeInfo.PositionLevel,
-                RequesterPositionName = employeeInfo.PositionName,
-                SupervisorId = employeeInfo.SupervisorId,
-                SupervisorName = employeeInfo.SupervisorName
-            };
-
-            var documentId = await DocumentService.CreateDraftFromTemplateAsync(req);
-
-            Navigation.NavigateTo($"/survey/document/{documentId}", true);
-        }
-        catch (Exception ex)
-        {
-            errorMessage = ex.Message;
-        }
-        finally
-        {
-            isSaving = false;
-        }
-    }
-
     private async Task SaveDraft()
     {
         isSaving = true;
@@ -584,10 +687,6 @@
         try
         {
             await EnsureDocumentCreatedAsync();
-            foreach (var a in document!.Answers.OrderBy(x => x.SortOrder))
-            {
-                Console.WriteLine($"AnswerId={a.AnswerId} Type={a.Type} Q={a.Question} Answer='{a.Answer ?? "<NULL>"}' Selected=[{string.Join(",", a.SelectedOptionIds)}]");
-            }
 
             await DocumentService.SaveDraftAsync(new DocumentSurveySaveRequestDto
             {
@@ -596,14 +695,14 @@
                 {
                     AnswerId = a.AnswerId,
                     Answer = a.Answer,
-                    SelectedCheckboxOptionIds = a.SelectedOptionIds
+                    SelectedCheckboxOptionIds = a.SelectedOptionIds,
+                    OtherText = a.OtherText
                 }).ToList()
             });
 
             document = await DocumentService.GetForRenderAsync(document.Id);
 
             successMessage = "Draft saved successfully!";
-            
         }
         catch (Exception ex)
         {
@@ -632,7 +731,8 @@
                 {
                     AnswerId = a.AnswerId,
                     Answer = a.Answer,
-                    SelectedCheckboxOptionIds = a.SelectedOptionIds
+                    SelectedCheckboxOptionIds = a.SelectedOptionIds,
+                    OtherText = a.OtherText
                 }).ToList()
             });
 
@@ -650,6 +750,7 @@
             isSaving = false;
         }
     }
+
     private async Task Approve()
     {
         if (document == null) return;
@@ -660,7 +761,7 @@
 
         try
         {
-            await DocumentService.ApproveAsync(document.Id); // kamu perlu bikin method ini di service
+            await DocumentService.ApproveAsync(document.Id);
             document = await DocumentService.GetForRenderAsync(document.Id);
             successMessage = "Approved successfully!";
         }
@@ -709,10 +810,49 @@
                 {
                     d.Answer = p.Answer;
                     d.SelectedOptionIds = p.SelectedOptionIds?.ToList() ?? new();
+                    d.OtherText = p.OtherText;
                 }
             }
         }
+    }
 
+    private void OpenTemplateUpdateModal()
+    {
+        showTemplateUpdateModal = true;
+    }
+
+    private void UseOldTemplate()
+    {
+        ignoreTemplateUpdate = true;
+        showTemplateUpdateModal = false;
+    }
+
+    private async Task UseLatestTemplate()
+    {
+        if (document == null) return;
+
+        isSaving = true;
+        errorMessage = string.Empty;
+        successMessage = null;
+
+        try
+        {
+            await DocumentService.UpgradeDraftToLatestTemplateAsync(document.Id, CancellationToken.None);
+            document = await DocumentService.GetForRenderAsync(document.Id);
+
+            ignoreTemplateUpdate = false;
+            showTemplateUpdateModal = false;
+
+            successMessage = "Template berhasil di-update ke versi terbaru!";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isSaving = false;
+        }
     }
 
     private void BackToList()

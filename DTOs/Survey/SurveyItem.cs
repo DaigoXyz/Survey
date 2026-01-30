@@ -6,7 +6,7 @@ using Survey.Entities.SurveyEntities;
 
 namespace Survey.DTOs.Survey
 {
-    public record CheckboxOptionDto(int Id, string Name);
+    public record CheckboxOptionDto(int Id, string Name, bool IsOther);
 
     public record SurveyItemDto(
         int Id,

@@ -21,8 +21,8 @@ namespace Survey.DTOs.Document
         public string Question { get; set; } = string.Empty;
         public int Type { get; set; }
         public int SortOrder { get; set; }
-
         public string? Answer { get; set; }
+        public string? OtherText { get; set; }
         public List<CheckboxOptionDto> Options { get; set; } = new();
         public List<int> SelectedOptionIds { get; set; } = new();
     }

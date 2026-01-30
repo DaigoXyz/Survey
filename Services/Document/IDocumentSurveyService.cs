@@ -12,6 +12,7 @@ namespace Survey.Services.Document
         Task<DocumentSurveyDto> GetForRenderAsync(int documentId);
         Task<List<DocumentSurveyDto>> GetListAsync();
         Task<string> GenerateDocumentNoAsync();
+        Task UpgradeDraftToLatestTemplateAsync(int documentId, CancellationToken ct = default);
         Task SaveDraftAsync(DocumentSurveySaveRequestDto req);
         Task SubmitAsync(int documentId);
         Task DeleteAsync(int documentId);

@@ -1,48 +1,103 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@inject IHttpContextAccessor HttpContextAccessor
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">Survey App</a>
+        <a class="navbar-brand fw-bold">Survey App</a>
     </div>
 </div>
 
 <div class="@NavMenuCssClass nav-scrollable">
-    <nav class="flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <i class="bi bi-house-door"></i>
+    <nav class="flex-column p-3">
+        <div class="nav-item mb-1">
+            <NavLink class="nav-link text-white d-flex align-items-center px-3 py-2 rounded" href="/Dashboard">
+                <i class="bi bi-house-door fs-5 me-3"></i>
                 <span>Home</span>
             </NavLink>
         </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="/manage-user">
-                <i class="bi bi-people-fill"></i>
-                <span>Management User</span>
-            </NavLink>
+        @if(IsSupervisor){
+            <div class="nav-item mb-1">
+                <NavLink class="nav-link text-white d-flex align-items-center px-3 py-2 rounded" href="/manage-user">
+                    <i class="bi bi-people-fill fs-5 me-3"></i>
+                    <span>Management User</span>
+                </NavLink>
+            </div>
+        }
+        <div class="nav-item mb-1">
+            <a class="nav-link text-white d-flex align-items-center justify-content-between px-3 py-2 rounded"
+                role="button" @onclick="ToggleSurveyMenu" @onclick:preventDefault>
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-clipboard-data-fill fs-5 me-3"></i>
+                    <span>Survey</span>
+                </div>
+                <i class="bi @(isSurveyMenuOpen ? "bi-chevron-up" : "bi-chevron-down") fs-6"></i>
+            </a>
+            <div class="collapse @(isSurveyMenuOpen ? "show" : "")">
+                <div class="mt-1">
+                    <NavLink class="nav-link text-white d-flex align-items-center ps-5 pe-3 py-2 rounded"
+                        href="/survey/template-list">
+                        <i class="bi bi-list-ul me-3"></i>
+                        <span>Survey Template List</span>
+                    </NavLink>
+                    <NavLink class="nav-link text-white d-flex align-items-center ps-5 pe-3 py-2 rounded"
+                        href="/master-template-survey">
+                        <i class="bi bi-file-earmark-plus me-3"></i>
+                        <span>Master Template Survey</span>
+                    </NavLink>
+                </div>
+            </div>
         </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="/master-template-survey">
-                <i class="bi bi-clipboard-data-fill"></i>
-                <span>Master Template Survey</span>
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="/survey/list">
-                <i class="bi bi-file-earmark-text-fill"></i>
-                <span>Master Document</span>
-            </NavLink>
+        <div class="nav-item mb-1">
+            <a class="nav-link text-white d-flex align-items-center justify-content-between px-3 py-2 rounded"
+                role="button" @onclick="ToggleDocumentMenu" @onclick:preventDefault>
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-file-earmark-text-fill fs-5 me-3"></i>
+                    <span>Document</span>
+                </div>
+                <i class="bi @(isDocumentMenuOpen ? "bi-chevron-up" : "bi-chevron-down") fs-6"></i>
+            </a>
+            <div class="collapse @(isDocumentMenuOpen ? "show" : "")">
+                <div class="mt-1">
+                    <NavLink class="nav-link text-white d-flex align-items-center ps-5 pe-3 py-2 rounded"
+                        href="/survey/list">
+                        <i class="bi bi-list-ul me-3"></i>
+                        <span>Document Survey List</span>
+                    </NavLink>
+                    @if(!IsSupervisor){
+                        <NavLink class="nav-link text-white d-flex align-items-center ps-5 pe-3 py-2 rounded"
+                            href="/survey/document">
+                            <i class="bi bi-file-earmark-plus me-3"></i>
+                            <span>Create Document Survey</span>
+                        </NavLink>
+                    }
+                </div>
+            </div>
         </div>
     </nav>
 </div>
 
 @code {
     private bool collapseNavMenu = true;
+    private bool isSurveyMenuOpen = false;
+    private bool isDocumentMenuOpen = false;
+    private ClaimsPrincipal? User => HttpContextAccessor.HttpContext?.User;
+    private string CurrentRole => User?.FindFirstValue(ClaimTypes.Role) ?? "";
+    private bool IsSupervisor => CurrentRole.Equals("Supervisor", StringComparison.OrdinalIgnoreCase);
 
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : "show";
 
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;
+    }
+
+    private void ToggleSurveyMenu()
+    {
+        isSurveyMenuOpen = !isSurveyMenuOpen;
+    }
+
+    private void ToggleDocumentMenu()
+    {
+        isDocumentMenuOpen = !isDocumentMenuOpen;
     }
 }

@@ -1,5 +1,4 @@
 @page "/"
-@rendermode InteractiveServer
 @layout Survey.Components.Layout.AuthLayout
 @using Survey.DTOs.Auth
 @using Survey.Services.Auth
@@ -41,10 +40,6 @@
                     Masuk
                 </button>
             </form>
-
-            <div class="text-center">
-                <a href="#" class="text-decoration-none">Lupa password?</a>
-            </div>
         </div>
     </div>
 </div>
@@ -52,5 +47,4 @@
 @code {
     private LoginRequestDto loginRequest = new();
     private string errorMessage = string.Empty;
-    private bool isLoading = false;
 }

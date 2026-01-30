@@ -1,6 +1,5 @@
 @page "/master-template-survey"
 @page "/master-template-survey/{HeaderId:int}"
-@rendermode InteractiveServer
 @using Survey.Entities.SurveyEntities
 @using Survey.Services.Survey
 @inject ISurveyTemplateService SurveyService
@@ -182,7 +181,6 @@
     </div>
 </div>
 
-<!-- Add/Edit Item Modal -->
 @if (showItemModal)
 {
     <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
@@ -259,7 +257,6 @@
     </div>
 }
 
-<!-- Template Selection Modal -->
 @if (showTemplateModal)
 {
     <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
@@ -293,7 +290,9 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var t in FilterTemplates(templateList, templateSearch))
+                                    @foreach (var t in FilterTemplates(
+                                                                templateList.Where(x => x.PositionId == CurrentPositionId),
+                                                                templateSearch))
                                     {
                                         <tr>
                                             <td>@t.TemplateCode</td>
@@ -326,11 +325,11 @@
 
 @code {
     [Parameter] public int? HeaderId { get; set; }
-
     private int? headerId;
     private string templateCode = "Auto-generate";
     private string templateName = "";
     private int positionId = 0;
+    private int CurrentPositionId;
     private string theme = "";
     private bool showTemplateModal = false;
     private string templateSearch = "";
@@ -361,7 +360,7 @@
             Navigation.NavigateTo("/", forceLoad: true);
             return;
         }
-
+        CurrentPositionId = AuthClaims.GetPositionId(user);
         await LoadPositions();
 
         if (HeaderId.HasValue)
@@ -646,18 +645,19 @@
         }
     }
 
-    private IEnumerable<SurveyHeaderListDto> FilterTemplates(List<SurveyHeaderListDto> data, string q)
+    private IEnumerable<SurveyHeaderListDto> FilterTemplates(
+    IEnumerable<SurveyHeaderListDto> list,
+    string search)
     {
-        if (data == null) return Enumerable.Empty<SurveyHeaderListDto>();
-        if (string.IsNullOrWhiteSpace(q)) return data;
+        if (string.IsNullOrWhiteSpace(search))
+            return list;
 
-        q = q.Trim().ToLowerInvariant();
+        var q = search.Trim().ToLowerInvariant();
 
-        return data.Where(x =>
-        (x.TemplateCode ?? "").ToLowerInvariant().Contains(q) ||
-        (x.TemplateName ?? "").ToLowerInvariant().Contains(q) ||
-        (x.Theme ?? "").ToLowerInvariant().Contains(q) ||
-        x.PositionId.ToString().Contains(q)
+        return list.Where(t =>
+        (t.TemplateCode ?? "").ToLowerInvariant().Contains(q) ||
+        (t.TemplateName ?? "").ToLowerInvariant().Contains(q) ||
+        (t.Theme ?? "").ToLowerInvariant().Contains(q)
         );
     }
 

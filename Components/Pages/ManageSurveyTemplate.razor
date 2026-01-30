@@ -1,0 +1,245 @@
+@page "/survey/template-list"
+@using Survey.Entities.SurveyEntities
+@using Survey.Services.Survey
+@using System.Security.Claims
+@using Survey.Helpers
+@inject ISurveyTemplateService SurveyService
+@inject IHttpContextAccessor HttpContextAccessor
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Survey Template List</PageTitle>
+
+<div class="container-fluid p-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/survey">Survey</a></li>
+            <li class="breadcrumb-item active">Survey Template List</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">Survey Template List</h2>
+        <a href="/master-template-survey" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>Create New Template
+        </a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = string.Empty"></button>
+        </div>
+    }
+
+    <div class="card">
+        <div class="card-body">
+            <!-- Search & Filter -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" placeholder="Search by template code, name, theme..." 
+                               @bind="searchQuery" @bind:event="oninput" />
+                        @if (!string.IsNullOrWhiteSpace(searchQuery))
+                        {
+                            <button class="btn btn-outline-secondary" @onclick="ClearSearch">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                        }
+                    </div>
+                </div>
+                <div class="col-md-3"></div>
+                <div class="col-md-3 text-end">
+                    <button class="btn btn-outline-primary" @onclick="LoadTemplates" disabled="@isLoading">
+                        <i class="bi bi-arrow-clockwise me-1"></i>
+                        @if (isLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm"></span>
+                        }
+                        else
+                        {
+                            <span>Refresh</span>
+                        }
+                    </button>
+                </div>
+            </div>
+
+            <!-- Table -->
+            @if (isLoading && templates.Count == 0)
+            {
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Loading data...</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Template Code</th>
+                                <th>Template Name</th>
+                                <th>Position ID</th>
+                                <th>Theme</th>
+                                <th style="width: 120px;" class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (FilteredTemplates.Any())
+                            {
+                                @foreach (var template in FilteredTemplates)
+                                {
+                                    <tr>
+                                        <td>
+                                            <strong>@template.TemplateCode</strong>
+                                        </td>
+                                        <td>@template.TemplateName</td>
+                                        <td>@template.PositionId</td>
+                                        <td>@template.Theme</td>
+                                        <td class="text-center">
+                                            <button class="btn btn-outline-primary btn-sm" @onclick="() => ViewTemplate(template.Id)"
+                                                title="View/Edit">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+
+                                            <button class="btn btn-outline-danger btn-sm ms-1"
+                                                @onclick="() => ConfirmDelete(template.Id)" title="Delete">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4">
+                                        @if (string.IsNullOrWhiteSpace(searchQuery))
+                                        {
+                                            <i class="bi bi-inbox me-2"></i>
+                                            <span>No templates found for your position level.</span>
+                                        }
+                                        else
+                                        {
+                                            <span>No results found for your search criteria.</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                @if (templates.Count > 0)
+                {
+                    <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+                        <small class="text-muted">
+                            Showing @FilteredTemplates.Count() of @templates.Count templates
+                        </small>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private int currentUserPositionId;
+    private List<SurveyHeaderListDto> templates = new();
+    private string searchQuery = "";
+    private bool isLoading = false;
+    private string errorMessage = "";
+    private string successMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = HttpContextAccessor.HttpContext?.User;
+        if (user?.Identity?.IsAuthenticated != true)
+        {
+            Navigation.NavigateTo("/", forceLoad: true);
+            return;
+        }
+
+        currentUserPositionId = AuthClaims.GetPositionId(user);
+        await LoadTemplates();
+    }
+    private IEnumerable<SurveyHeaderListDto> FilteredTemplates
+    {
+        get
+        {
+            var filtered = templates.Where(t => t.PositionId == currentUserPositionId);
+
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                var query = searchQuery.Trim().ToLowerInvariant();
+                filtered = filtered.Where(t =>
+                (t.TemplateCode ?? "").ToLowerInvariant().Contains(query) ||
+                (t.TemplateName ?? "").ToLowerInvariant().Contains(query) ||
+                (t.Theme ?? "").ToLowerInvariant().Contains(query) ||
+                t.PositionId.ToString().Contains(query)
+                );
+            }
+
+            return filtered;
+        }
+    }
+    private async Task LoadTemplates()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = "";
+
+            templates = await SurveyService.ListAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load templates: {ex.Message}";
+            templates = new();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ConfirmDelete(int templateId)
+    {
+        var ok = await JSRuntime.InvokeAsync<bool>("confirm", "Yakin mau delete template ini?");
+        if (!ok) return;
+
+        try
+        {
+            await SurveyService.DeleteHeaderAsync(templateId);
+            successMessage = "Template deleted successfully.";
+            await LoadTemplates();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to delete template: {ex.Message}";
+        }
+    }
+
+    private void ClearSearch()
+    {
+        searchQuery = "";
+    }
+
+    private void ViewTemplate(int templateId)
+    {
+        Navigation.NavigateTo($"/master-template-survey/{templateId}");
+    }
+}

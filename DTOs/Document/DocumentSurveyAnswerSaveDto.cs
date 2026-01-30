@@ -9,6 +9,7 @@ namespace Survey.DTOs.Document
     {
         public int AnswerId { get; set; }
         public string? Answer { get; set; }
+        public string? OtherText { get; set; }
         public List<int> SelectedCheckboxOptionIds { get; set; } = new();
     }
 }
