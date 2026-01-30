@@ -3,8 +3,6 @@
 ## Overview
 This project is a survey application built using C# for the backend and Blazor Razor for the frontend. It allows users to create, manage, and participate in surveys. 
 
-![Survey Application](https://via.placeholder.com/800x400.png?text=Survey+Application)
-
 ## Technologies Used
 - **Backend:** C#
 - **Frontend:** Blazor Razor
