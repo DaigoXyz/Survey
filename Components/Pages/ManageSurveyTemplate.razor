@@ -13,7 +13,7 @@
 <div class="container-fluid p-4">
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="/survey">Survey</a></li>
+            <li class="breadcrumb-item"><a>Survey</a></li>
             <li class="breadcrumb-item active">Survey Template List</li>
         </ol>
     </nav>
@@ -48,8 +48,8 @@
                 <div class="col-md-6">
                     <div class="input-group">
                         <span class="input-group-text"><i class="bi bi-search"></i></span>
-                        <input type="text" class="form-control" placeholder="Search by template code, name, theme..." 
-                               @bind="searchQuery" @bind:event="oninput" />
+                        <input type="text" class="form-control" placeholder="Search by template code, name, theme..."
+                            @bind="searchQuery" @bind:event="oninput" />
                         @if (!string.IsNullOrWhiteSpace(searchQuery))
                         {
                             <button class="btn btn-outline-secondary" @onclick="ClearSearch">
@@ -74,7 +74,6 @@
                 </div>
             </div>
 
-            <!-- Table -->
             @if (isLoading && templates.Count == 0)
             {
                 <div class="text-center py-5">
@@ -110,8 +109,8 @@
                                         <td>@template.PositionId</td>
                                         <td>@template.Theme</td>
                                         <td class="text-center">
-                                            <button class="btn btn-outline-primary btn-sm" @onclick="() => ViewTemplate(template.Id)"
-                                                title="View/Edit">
+                                            <button class="btn btn-outline-primary btn-sm"
+                                                @onclick="() => ViewTemplate(template.Id)" title="View/Edit">
                                                 <i class="bi bi-eye"></i>
                                             </button>
 
@@ -130,7 +129,7 @@
                                         @if (string.IsNullOrWhiteSpace(searchQuery))
                                         {
                                             <i class="bi bi-inbox me-2"></i>
-                                            <span>No templates found for your position level.</span>
+                                            <span>No templates found.</span>
                                         }
                                         else
                                         {
@@ -157,7 +156,6 @@
 </div>
 
 @code {
-    private int currentUserPositionId;
     private List<SurveyHeaderListDto> templates = new();
     private string searchQuery = "";
     private bool isLoading = false;
@@ -173,14 +171,15 @@
             return;
         }
 
-        currentUserPositionId = AuthClaims.GetPositionId(user);
         await LoadTemplates();
     }
+
     private IEnumerable<SurveyHeaderListDto> FilteredTemplates
     {
         get
         {
-            var filtered = templates.Where(t => t.PositionId == currentUserPositionId);
+            // Hapus filter berdasarkan PositionId, tampilkan semua template
+            var filtered = templates.AsEnumerable();
 
             if (!string.IsNullOrWhiteSpace(searchQuery))
             {
@@ -196,6 +195,7 @@
             return filtered;
         }
     }
+
     private async Task LoadTemplates()
     {
         try

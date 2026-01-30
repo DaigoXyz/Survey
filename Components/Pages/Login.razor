@@ -25,15 +25,17 @@
                 </div>
             }
 
+            <!-- Gunakan form biasa dengan method POST -->
             <form method="post" action="/auth/login">
                 <div class="mb-3">
                     <label class="form-label">Username</label>
-                    <input name="Username" class="form-control" placeholder="Masukkan username" />
+                    <input name="Username" class="form-control" placeholder="Masukkan username" required />
                 </div>
 
                 <div class="mb-4">
                     <label class="form-label">Password</label>
-                    <input name="Password" type="password" class="form-control" placeholder="Masukkan password" />
+                    <input name="Password" type="password" class="form-control" placeholder="Masukkan password"
+                        required />
                 </div>
 
                 <button type="submit" class="btn btn-primary w-100 mb-3">
@@ -45,6 +47,15 @@
 </div>
 
 @code {
-    private LoginRequestDto loginRequest = new();
     private string errorMessage = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        // Cek jika ada error dari query string
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        if (Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query).TryGetValue("error", out var error))
+        {
+            errorMessage = Uri.UnescapeDataString(error.ToString());
+        }
+    }
 }

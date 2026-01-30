@@ -279,23 +279,21 @@
     private List<SuperVisorInfoDto> supervisorList = new();
     private List<PositionDto> positions = new();
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (!firstRender) return;
-
         var supervisorId = GetLoggedInUserId();
         if (supervisorId <= 0)
         {
             Navigation.NavigateTo("/", forceLoad: true);
             return;
         }
-        
+
         await LoadPositions();
+
         form.SupervisorId = supervisorId;
         await LoadSupervisorInfo(supervisorId);
 
         SyncPositionName();
-        StateHasChanged();
     }
 
     private int GetLoggedInUserId()
@@ -467,6 +465,7 @@
                 var dto = new UpdateUserDto
                 {
                     Id = form.UserId!.Value,
+                    Username = form.Username,
                     PositionId = form.PositionId,
                     PositionName = form.PositionName,
                     SupervisorId = form.SupervisorId
@@ -474,6 +473,8 @@
 
                 await UserService.UpdateUserAsync(supervisorId, dto);
                 successMessage = "User berhasil diupdate.";
+
+                await ReloadAfterSaveAsync();
             }
             else
             {
@@ -488,6 +489,7 @@
 
                 await UserService.CreateUserAsync(supervisorId, dto);
                 successMessage = "User berhasil dibuat.";
+                await ReloadAfterSaveAsync();
             }
 
             ResetForm();
@@ -501,6 +503,22 @@
             isSaving = false;
         }
     }
+    private async Task ReloadAfterSaveAsync()
+    {
+        await LoadUserList();
+
+        if (form.UserId.HasValue)
+        {
+            var fresh = userList.FirstOrDefault(x => x.Id == form.UserId.Value);
+            if (fresh != null)
+            {
+                SelectUser(fresh);
+            }
+        }
+
+        StateHasChanged();
+    }
+
 
     private void ResetForm()
     {

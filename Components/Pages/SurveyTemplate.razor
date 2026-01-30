@@ -14,7 +14,7 @@
 <div class="container-fluid p-4">
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="/survey">Survey</a></li>
+            <li class="breadcrumb-item"><a href="/survey/template-list">Survey</a></li>
             <li class="breadcrumb-item active">Master Template Survey</li>
         </ol>
     </nav>
@@ -291,7 +291,7 @@
                                 </thead>
                                 <tbody>
                                     @foreach (var t in FilterTemplates(
-                                                                templateList.Where(x => x.PositionId == CurrentPositionId),
+                                                                templateList,
                                                                 templateSearch))
                                     {
                                         <tr>

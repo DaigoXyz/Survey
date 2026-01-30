@@ -369,9 +369,10 @@ namespace Survey.Services.Document
             doc.Status = Status.ConfirmToApprove;
             await _repo.SaveChangesAsync();
         }
-        public async Task<List<TemplateOptionDto>> GetTemplateOptionsAsync()
+        public async Task<List<TemplateOptionDto>> GetTemplateOptionsAsync(int positionId)
         {
             return await _db.SurveyHeaders
+                .Where(h => h.PositionId == positionId)
                 .AsNoTracking()
                 .Select(h => new TemplateOptionDto
                 {
@@ -383,6 +384,7 @@ namespace Survey.Services.Document
                 })
                 .ToListAsync();
         }
+        
         public async Task DeleteAsync(int documentId)
         {
             var doc = await _db.DocumentSurveys

@@ -12,5 +12,6 @@ namespace Survey.DTOs.Document
         public string TemplateName { get; set; } = string.Empty;
         public string Theme { get; set; } = string.Empty;
         public int ItemCount { get; set; }
+        public int PositionId { get; set; } 
     }
 }

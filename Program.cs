@@ -122,37 +122,53 @@ app.UseAntiforgery();
 
 app.MapPost("/auth/login", async (HttpContext http, IAuthService auth) =>
 {
-    var form = await http.Request.ReadFormAsync();
-    var username = form["Username"].ToString();
-    var password = form["Password"].ToString();
-
-    var result = await auth.LoginAsync(new LoginRequestDto
+    try
     {
-        Username = username,
-        Password = password
-    });
+        var form = await http.Request.ReadFormAsync();
+        var username = form["Username"].ToString();
+        var password = form["Password"].ToString();
 
-    var claims = new List<Claim>
-    {
-        new Claim(ClaimTypes.NameIdentifier, result.UserId.ToString()),
-        new Claim(ClaimTypes.Name, result.Username),
-        new Claim(ClaimTypes.Role, result.Role),
-        new Claim("PositionId", result.PositionId.ToString())
-    };
-
-    var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-    var principal = new ClaimsPrincipal(identity);
-
-    await http.SignInAsync(
-        CookieAuthenticationDefaults.AuthenticationScheme,
-        principal,
-        new AuthenticationProperties
+        if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
         {
-            IsPersistent = true,
-            ExpiresUtc = DateTimeOffset.UtcNow.AddHours(8)
+            return Results.Redirect("/?error=Username+dan+Password+harus+diisi");
+        }
+
+        var result = await auth.LoginAsync(new LoginRequestDto
+        {
+            Username = username,
+            Password = password
         });
 
-    return Results.Redirect("/dashboard");
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, result.UserId.ToString()),
+            new Claim(ClaimTypes.Name, result.Username),
+            new Claim(ClaimTypes.Role, result.Role),
+            new Claim("PositionId", result.PositionId.ToString())
+        };
+
+        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+        var principal = new ClaimsPrincipal(identity);
+
+        await http.SignInAsync(
+            CookieAuthenticationDefaults.AuthenticationScheme,
+            principal,
+            new AuthenticationProperties
+            {
+                IsPersistent = true,
+                ExpiresUtc = DateTimeOffset.UtcNow.AddHours(8)
+            });
+
+        return Results.Redirect("/dashboard");
+    }
+    catch (UnauthorizedAccessException ex)
+    {
+        return Results.Redirect("/?error=Username+atau+Password+salah");
+    }
+    catch (Exception ex)
+    {
+        return Results.Redirect($"/?error={Uri.EscapeDataString(ex.Message)}");
+    }
 });
 
 app.MapGet("/auth/logout", async (HttpContext http) =>

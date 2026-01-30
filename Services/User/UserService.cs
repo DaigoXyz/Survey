@@ -124,12 +124,12 @@ namespace Survey.Services.User
             var user = await _userRepo.GetByIdWithRoleAsync(dto.Id)
                 ?? throw new KeyNotFoundException("User tidak ditemukan.");
 
-            // optional: validasi supervisor
             if (user.Id == supervisorId)
                 throw new InvalidOperationException("Tidak bisa mengupdate diri sendiri.");
 
             user.PositionId = dto.PositionId;
             user.PositionName = dto.PositionName;
+            user.Username = dto.Username;
 
             await _userRepo.SaveChangesAsync();
             return _mapper.ToDto(user);

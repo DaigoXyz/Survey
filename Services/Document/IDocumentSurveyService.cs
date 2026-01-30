@@ -16,7 +16,7 @@ namespace Survey.Services.Document
         Task SaveDraftAsync(DocumentSurveySaveRequestDto req);
         Task SubmitAsync(int documentId);
         Task DeleteAsync(int documentId);
-        Task<List<TemplateOptionDto>> GetTemplateOptionsAsync();
+        Task<List<TemplateOptionDto>> GetTemplateOptionsAsync(int positionId);
         Task<DocumentSurveyPreviewDto> GetPreviewFromTemplateAsync(int templateHeaderId);
         Task<List<DocumentSurveyDto>> GetListForCurrentUserAsync(int userId, string role);
         Task ApproveAsync(int documentId);

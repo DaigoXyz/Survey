@@ -28,7 +28,7 @@
     {
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/survey">Survey</a></li>
+                <li class="breadcrumb-item"><a href="/survey/list">Document</a></li>
                 <li class="breadcrumb-item active">Form Survey</li>
             </ol>
         </nav>
@@ -172,7 +172,6 @@
                 <div class="card-body">
                     @if (document == null)
                     {
-                        <!-- Template Selection (New Document) -->
                         <div class="border rounded p-3 bg-light mb-4">
                             <div class="row g-3">
                                 <div class="col-md-6">
@@ -408,10 +407,13 @@
                             @bind:event="oninput" />
                     </div>
 
-                    @if (availableTemplates.Any())
+                    @{
+                        var filteredTemplates = FilterTemplates(availableTemplates, searchQuery);
+                    }
+                    @if (filteredTemplates.Any())
                     {
                         <div class="list-group">
-                            @foreach (var template in GetFilteredTemplates())
+                            @foreach (var template in filteredTemplates)
                             {
                                 <button type="button"
                                     class="list-group-item list-group-item-action @(selectedTemplateId == template.Id ? "active" : "")"
@@ -428,8 +430,11 @@
                     }
                     else
                     {
-                        <div class="alert alert-warning mb-0">No templates available.</div>
+                        <div class="alert alert-warning mb-0">
+                            No templates available for your position. (PositionId: @CurrentPositionId)
+                        </div>
                     }
+
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @onclick="CloseTemplateModal">Close</button>
@@ -504,6 +509,7 @@
     private bool isLoading = true;
     private bool isSaving = false;
     private bool surveySectionExpanded = true;
+    private int CurrentPositionId;
 
     private string errorMessage = string.Empty;
     private string? successMessage;
@@ -530,10 +536,9 @@
                 UserId = user != null ? AuthClaims.GetUserId(user) : 0,
                 Username = user?.Identity?.Name ?? "User"
             };
-
-            availableTemplates = await DocumentService.GetTemplateOptionsAsync();
+            CurrentPositionId = AuthClaims.GetPositionId(user!);
+            availableTemplates = await DocumentService.GetTemplateOptionsAsync(CurrentPositionId);
             previewDocumentNo = await DocumentService.GenerateDocumentNoAsync();
-
             if (DocumentId.HasValue)
             {
                 document = await DocumentService.GetForRenderAsync(DocumentId.Value);
@@ -634,15 +639,17 @@
         }
     }
 
-    private List<TemplateOptionDto> GetFilteredTemplates()
+    private List<TemplateOptionDto> FilterTemplates(
+        IEnumerable<TemplateOptionDto> source,
+        string search)
     {
-        if (string.IsNullOrWhiteSpace(searchQuery))
-            return availableTemplates;
+        if (string.IsNullOrWhiteSpace(search))
+            return source.ToList();
 
-        return availableTemplates.Where(t =>
-        t.TemplateName.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
-        t.TemplateCode.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
-        t.Theme.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)
+        return source.Where(t =>
+        (t.TemplateName ?? "").Contains(search, StringComparison.OrdinalIgnoreCase) ||
+        (t.TemplateCode ?? "").Contains(search, StringComparison.OrdinalIgnoreCase) ||
+        (t.Theme ?? "").Contains(search, StringComparison.OrdinalIgnoreCase)
         ).ToList();
     }
 

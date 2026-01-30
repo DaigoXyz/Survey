@@ -8,6 +8,7 @@ namespace Survey.DTOs.User
     public class UpdateUserDto
     {
         public int Id { get; set; }
+        public string Username { get; set; } = "";
         public int PositionId { get; set; }
         public string PositionName { get; set; } = "";
         public int SupervisorId { get; set; }
