@@ -23,6 +23,19 @@ namespace Survey.Repositories
                .Where(r => r.SupervisorId == supervisorId)
                .ToListAsync();
 
+        public async Task SetSupervisorAsync(int userId, int supervisorId)
+        {
+            var existing = await _db.UserRelations.FirstOrDefaultAsync(r => r.UserId == userId);
+            if (existing != null)
+                _db.UserRelations.Remove(existing);
+
+            await _db.UserRelations.AddAsync(new UserRelation
+            {
+                UserId = userId,
+                SupervisorId = supervisorId
+            });
+        }
+
         public async Task DeleteByUserIdAsync(int userId)
         {
             var rels = await _db.UserRelations.Where(r => r.UserId == userId).ToListAsync();

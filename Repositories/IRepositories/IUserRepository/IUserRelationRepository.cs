@@ -11,6 +11,7 @@ namespace Survey.Repositories.IRepositories.IUserRepository
         Task<List<UserRelation>> GetBySupervisorIdAsync(int supervisorId);
         Task<UserRelation?> GetByUserIdAsync(int userId);
         Task DeleteByUserIdAsync(int userId);
+        Task SetSupervisorAsync(int userId, int supervisorId);
         Task AddAsync(UserRelation relation);
         Task SaveChangesAsync();
     }

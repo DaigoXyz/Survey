@@ -452,23 +452,16 @@ namespace Survey.Services.Document
                     .ToList()
             };
         }
-        public async Task<List<DocumentSurveyDto>> GetListForCurrentUserAsync(int userId, string role)
+        public async Task<List<DocumentSurveyDto>> GetListForCurrentUserAsync(int userId)
         {
-            var profile = await _userService.GetRequesterProfileAsync(userId);
-            var myEmployeeId = profile.EmployeeId;
+            var uid = userId.ToString();
 
-            var q = _db.DocumentSurveys.AsNoTracking();
-
-            if (string.Equals(role, "Supervisor", StringComparison.OrdinalIgnoreCase))
-            {
-                q = q.Where(d => d.SupervisorId == myEmployeeId);
-            }
-            else
-            {
-                q = q.Where(d => d.CreatedByUserId == userId);
-            }
-
-            return await q
+            return await _db.DocumentSurveys
+                .AsNoTracking()
+                .Where(d =>
+                    d.CreatedByUserId == userId ||
+                    d.SupervisorId == uid
+                )
                 .OrderByDescending(d => d.DocumentDate)
                 .Select(d => new DocumentSurveyDto
                 {
@@ -489,14 +482,28 @@ namespace Survey.Services.Document
                 })
                 .ToListAsync();
         }
-        public async Task ApproveAsync(int documentId)
+
+        public async Task ApproveAsync(int documentId, int approverUserId)
         {
             var doc = await _repo.GetDocumentWithAnswersAsync(documentId);
             if (doc == null) throw new InvalidOperationException("Document tidak ditemukan.");
-            if (doc.Status != Status.ConfirmToApprove) throw new InvalidOperationException("Document belum siap di-approve.");
+            if (doc.Status != Status.ConfirmToApprove)
+                throw new InvalidOperationException("Document belum siap di-approve.");
+
+            if (!int.TryParse(doc.RequesterEmployeeId, out var requesterUserId))
+                throw new InvalidOperationException("RequesterEmployeeId tidak valid.");
+
+            var isApprover = await _userService.IsSupervisorOfUserAsync(approverUserId, requesterUserId);
+            if (!isApprover)
+                throw new UnauthorizedAccessException("Anda bukan approver untuk document ini.");
 
             doc.Status = Status.Confirmed;
             await _repo.SaveChangesAsync();
+        }
+
+        private static int? ParseUserId(string? supervisorId)
+        {
+            return int.TryParse(supervisorId, out var id) ? id : null;
         }
     }
 }

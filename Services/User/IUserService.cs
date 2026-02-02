@@ -15,6 +15,7 @@ namespace Survey.Services.User
         Task<RequesterProfileDto> GetRequesterProfileAsync(int userId);
         Task<UserDto> UpdateUserAsync(int supervisorId, UpdateUserDto dto);
         Task DeleteUserAsync(int supervisorId, int userId);
+        Task<bool> IsSupervisorOfUserAsync(int supervisorId, int userId);
 
     }
 }

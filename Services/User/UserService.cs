@@ -50,8 +50,8 @@ namespace Survey.Services.User
         {
             var supervisor = await _userRepo.GetByIdWithRoleAsync(supervisorId);
             if (supervisor is null) throw new UnauthorizedAccessException("Supervisor tidak valid.");
-            if (!string.Equals(supervisor.Role.Name, "Supervisor", StringComparison.OrdinalIgnoreCase))
-                throw new UnauthorizedAccessException("Bukan supervisor.");
+            // if (!string.Equals(supervisor.Role.Name, "Supervisor", StringComparison.OrdinalIgnoreCase))
+            //     throw new UnauthorizedAccessException("Bukan supervisor.");
 
             if (await _userRepo.UsernameExistsAsync(dto.Username))
                 throw new InvalidOperationException("Username sudah dipakai.");
@@ -78,9 +78,10 @@ namespace Survey.Services.User
 
             var relation = new UserRelation
             {
-                SupervisorId = supervisorId,
+                SupervisorId = dto.SupervisorId,
                 UserId = entity.Id
             };
+
 
             await _relationRepo.AddAsync(relation);
             await _relationRepo.SaveChangesAsync();
@@ -127,19 +128,41 @@ namespace Survey.Services.User
             if (user.Id == supervisorId)
                 throw new InvalidOperationException("Tidak bisa mengupdate diri sendiri.");
 
+            if (dto.SupervisorId <= 0)
+                throw new InvalidOperationException("Supervisor wajib dipilih.");
+
+            if (dto.SupervisorId == dto.Id)
+                throw new InvalidOperationException("Supervisor tidak boleh diri sendiri.");
+
+            var sup = await _userRepo.GetByIdWithRoleAsync(dto.SupervisorId);
+            if (sup is null)
+                throw new KeyNotFoundException("Supervisor tidak ditemukan.");
+
             user.PositionId = dto.PositionId;
             user.PositionName = dto.PositionName;
             user.Username = dto.Username;
 
             await _userRepo.SaveChangesAsync();
+
+            await _relationRepo.DeleteByUserIdAsync(user.Id);
+            await _relationRepo.SaveChangesAsync();
+
+            await _relationRepo.AddAsync(new UserRelation
+            {
+                UserId = user.Id,
+                SupervisorId = dto.SupervisorId
+            });
+            await _relationRepo.SaveChangesAsync();
+
             return _mapper.ToDto(user);
         }
+
         public async Task DeleteUserAsync(int supervisorId, int userId)
         {
             var supervisor = await _userRepo.GetByIdWithRoleAsync(supervisorId);
             if (supervisor is null) throw new UnauthorizedAccessException("Supervisor tidak valid.");
-            if (!string.Equals(supervisor.Role.Name, "Supervisor", StringComparison.OrdinalIgnoreCase))
-                throw new UnauthorizedAccessException("Bukan supervisor.");
+            // if (!string.Equals(supervisor.Role.Name, "Supervisor", StringComparison.OrdinalIgnoreCase))
+            //     throw new UnauthorizedAccessException("Bukan supervisor.");
 
             var user = await _userRepo.GetByIdWithRoleAsync(userId)
                 ?? throw new KeyNotFoundException("User tidak ditemukan.");
@@ -152,6 +175,12 @@ namespace Survey.Services.User
 
             await _userRepo.DeleteAsync(user); 
             await _userRepo.SaveChangesAsync();
+        }
+
+        public async Task<bool> IsSupervisorOfUserAsync(int supervisorId, int userId)
+        {
+            var rel = await _relationRepo.GetByUserIdAsync(userId);
+            return rel != null && rel.SupervisorId == supervisorId;
         }
     }
 }

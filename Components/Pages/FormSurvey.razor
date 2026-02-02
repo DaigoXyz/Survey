@@ -374,7 +374,7 @@
                     Submit
                 </button>
             }
-            @if (IsSupervisor && document != null && document.Status == 2)
+            @if (document != null && document.Status == 2 && IsApproverOfThisDocument)
             {
                 <button class="btn btn-success" @onclick="Approve" disabled="@isSaving">
                     @if (isSaving)
@@ -500,6 +500,8 @@
     [Parameter] public int? DocumentId { get; set; }
     private bool CanEdit => document != null && !document.IsReadOnly && !IsSupervisor;
     private ClaimsPrincipal? User => HttpContext.HttpContext?.User;
+    private int CurrentUserId => User is null ? 0 : AuthClaims.GetUserId(User);
+    private bool IsApproverOfThisDocument { get; set; } = false;
     private string CurrentRole => User?.FindFirstValue(ClaimTypes.Role) ?? "";
     private bool IsSupervisor => CurrentRole.Equals("Supervisor", StringComparison.OrdinalIgnoreCase);
     private DocumentSurveyDto? document;
@@ -525,6 +527,7 @@
     private EmployeeInfo employeeInfo = new();
     private TemplateInfo templateInfo = new();
 
+
     protected override async Task OnInitializedAsync()
     {
         try
@@ -543,6 +546,9 @@
             {
                 document = await DocumentService.GetForRenderAsync(DocumentId.Value);
                 SyncRequesterFromDocument();
+
+                if (int.TryParse(document.RequesterEmployeeId, out var requesterUserId))
+                    IsApproverOfThisDocument = await UserService.IsSupervisorOfUserAsync(CurrentUserId, requesterUserId);
             }
             else
             {
@@ -768,7 +774,7 @@
 
         try
         {
-            await DocumentService.ApproveAsync(document.Id);
+            await DocumentService.ApproveAsync(document.Id, CurrentUserId);
             document = await DocumentService.GetForRenderAsync(document.Id);
             successMessage = "Approved successfully!";
         }

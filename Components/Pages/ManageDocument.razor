@@ -19,12 +19,9 @@
 
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2 class="mb-0">Document Survey List</h2>
-        @if (!IsSupervisor)
-        {
             <a href="/survey/document" class="btn btn-primary">
                 <i class="bi bi-plus-circle me-1"></i>Create New Document
             </a>
-        }
     </div>
 
     @if (!string.IsNullOrEmpty(errorMessage))
@@ -131,10 +128,12 @@
                                                 <i class="bi bi-eye"></i>
                                             </button>
 
-                                            @if (!IsSupervisor)
+                                            @if (int.TryParse(doc.RequesterEmployeeId, out var uid) &&
+                                                                            uid == CurrentUserId &&
+                                                                            (doc.Status == 0 || doc.Status == 1))
                                             {
                                                 <button class="btn btn-outline-danger btn-sm ms-1"
-                                                    @onclick="() => ConfirmDelete(doc.Id)" title="Delete">
+                                                    @onclick="() => ConfirmDelete(doc.Id)">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             }
@@ -178,8 +177,7 @@
 @code {
     private ClaimsPrincipal? User => HttpContextAccessor.HttpContext?.User;
     private int CurrentUserId => User is null ? 0 : AuthClaims.GetUserId(User);
-    private string CurrentRole => User?.FindFirstValue(ClaimTypes.Role) ?? "";
-    private bool IsSupervisor => CurrentRole.Equals("Supervisor", StringComparison.OrdinalIgnoreCase);
+
     private List<DocumentSurveyDto> documents = new();
     private string searchQuery = "";
     private string filterStatus = "";
@@ -193,18 +191,16 @@
         {
             var filtered = documents.AsEnumerable();
 
-            // Filter by search query
             if (!string.IsNullOrWhiteSpace(searchQuery))
             {
                 var query = searchQuery.Trim().ToLowerInvariant();
                 filtered = filtered.Where(d =>
-                    (d.DocumentNo ?? "").ToLowerInvariant().Contains(query) ||
-                    (d.RequesterEmployeeId ?? "").ToLowerInvariant().Contains(query) ||
-                    (d.RequesterEmployeeName ?? "").ToLowerInvariant().Contains(query)
+                (d.DocumentNo ?? "").ToLowerInvariant().Contains(query) ||
+                (d.RequesterEmployeeId ?? "").ToLowerInvariant().Contains(query) ||
+                (d.RequesterEmployeeName ?? "").ToLowerInvariant().Contains(query)
                 );
             }
 
-            // Filter by status
             if (!string.IsNullOrWhiteSpace(filterStatus) && int.TryParse(filterStatus, out var status))
             {
                 filtered = filtered.Where(d => d.Status == status);
@@ -226,7 +222,7 @@
             isLoading = true;
             errorMessage = "";
 
-            documents = await DocumentService.GetListForCurrentUserAsync(CurrentUserId, CurrentRole);
+            documents = await DocumentService.GetListForCurrentUserAsync(CurrentUserId); // ✅ role dibuang
         }
         catch (Exception ex)
         {
@@ -238,6 +234,7 @@
             isLoading = false;
         }
     }
+
     private async Task ConfirmDelete(int documentId)
     {
         var ok = await JSRuntime.InvokeAsync<bool>("confirm", "Yakin mau delete document ini?");
@@ -254,37 +251,29 @@
             errorMessage = ex.Message;
         }
     }
-    private void ClearSearch()
-    {
-        searchQuery = "";
-    }
+
+    private void ClearSearch() => searchQuery = "";
 
     private void ViewDocument(int documentId)
     {
         Navigation.NavigateTo($"/survey/document/{documentId}");
     }
 
-    private string GetStatusBadgeClass(int status)
+    private string GetStatusBadgeClass(int status) => status switch
     {
-        return status switch
-        {
-            0 => "bg-info text-dark",
-            1 => "bg-secondary",
-            2 => "bg-warning text-dark",
-            3 => "bg-success",
-            _ => "bg-secondary"
-        };
-    }
+        0 => "bg-info text-dark",
+        1 => "bg-secondary",
+        2 => "bg-warning text-dark",
+        3 => "bg-success",
+        _ => "bg-secondary"
+    };
 
-    private string GetStatusText(int status)
+    private string GetStatusText(int status) => status switch
     {
-        return status switch
-        {
-            0 => "New",
-            1 => "Draft",
-            2 => "Confirm To Approve",
-            3 => "Confirmed",
-            _ => "Unknown"
-        };
-    }
+        0 => "New",
+        1 => "Draft",
+        2 => "Confirm To Approve",
+        3 => "Confirmed",
+        _ => "Unknown"
+    };
 }

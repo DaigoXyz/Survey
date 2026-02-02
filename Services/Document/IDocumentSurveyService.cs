@@ -18,7 +18,7 @@ namespace Survey.Services.Document
         Task DeleteAsync(int documentId);
         Task<List<TemplateOptionDto>> GetTemplateOptionsAsync(int positionId);
         Task<DocumentSurveyPreviewDto> GetPreviewFromTemplateAsync(int templateHeaderId);
-        Task<List<DocumentSurveyDto>> GetListForCurrentUserAsync(int userId, string role);
-        Task ApproveAsync(int documentId);
+        Task<List<DocumentSurveyDto>> GetListForCurrentUserAsync(int userId);
+        Task ApproveAsync(int documentId, int actorUserId);
     }
 }

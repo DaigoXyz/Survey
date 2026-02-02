@@ -185,7 +185,8 @@
                                         <td>@u.Username</td>
                                         <td>@u.PositionName</td>
                                         <td class="text-end">
-                                            <button class="btn btn-sm btn-primary" @onclick="() => SelectUser(u)">Pilih</button>
+                                            <button class="btn btn-sm btn-primary"
+                                                @onclick="async () => await SelectUser(u)">Pilih</button>
                                         </td>
                                     </tr>
                                 }
@@ -345,7 +346,7 @@
             if (supervisorId <= 0)
                 throw new UnauthorizedAccessException("Session tidak valid.");
 
-            userList = await UserService.GetUserAsync(supervisorId);
+            userList = await UserService.GetAllUsersAsync();
         }
         catch (Exception ex)
         {
@@ -358,12 +359,15 @@
         }
     }
 
-    private void SelectUser(UserDto u)
+    private async Task SelectUser(UserDto u)
     {
         form.UserId = u.Id;
         form.Username = u.Username;
         form.PositionId = u.PositionId;
         form.PositionName = u.PositionName;
+
+        await LoadSupervisorInfoByUserId(u.Id);
+
         showUserModal = false;
     }
 
@@ -381,8 +385,7 @@
         if (!allowPickSupervisor) return;
 
         showSupervisorModal = true;
-        if (supervisorList.Count == 0)
-            await LoadSupervisorList();
+        await LoadSupervisorList();
     }
 
     private void CloseSupervisorModal() => showSupervisorModal = false;
@@ -394,8 +397,15 @@
             isLoadingSupervisorList = true;
             errorMessage = "";
 
-            var entities = await UserRepo.GetAllSupervisorsAsync();
-            supervisorList = entities.Select(s => new SuperVisorInfoDto
+            var entities = await UserRepo.GetAllWithRoleAsync();
+
+            //var loggedInId = GetLoggedInUserId();
+            var editingUserId = form.UserId ?? 0;
+
+            supervisorList = entities
+            //.Where(x => x.Id != loggedInId)
+            .Where(x => x.Id != editingUserId)
+            .Select(s => new SuperVisorInfoDto
             {
                 Id = s.Id,
                 Username = s.Username,
@@ -413,6 +423,36 @@
             isLoadingSupervisorList = false;
         }
     }
+    private async Task LoadSupervisorInfoByUserId(int userId)
+    {
+        try
+        {
+            var profile = await UserService.GetRequesterProfileAsync(userId);
+
+            if (int.TryParse(profile.SupervisorId, out var supId))
+            {
+                form.SupervisorId = supId;
+                supervisorName = profile.SupervisorName ?? "";
+                supervisorPosition = "";
+            }
+            else
+            {
+                form.SupervisorId = 0;
+                supervisorName = "";
+                supervisorPosition = "";
+            }
+
+            if (form.SupervisorId > 0)
+                await LoadSupervisorInfo(form.SupervisorId);
+        }
+        catch
+        {
+            form.SupervisorId = 0;
+            supervisorName = "";
+            supervisorPosition = "";
+        }
+    }
+
 
     private async Task SelectSupervisor(SuperVisorInfoDto s)
     {
@@ -512,7 +552,7 @@
             var fresh = userList.FirstOrDefault(x => x.Id == form.UserId.Value);
             if (fresh != null)
             {
-                SelectUser(fresh);
+                await SelectUser(fresh);
             }
         }
 

@@ -324,7 +324,7 @@
                     userId = AuthClaims.GetUserId(user);
 
                     // Load documents
-                    recentDocuments = await DocumentService.GetListForCurrentUserAsync(userId, userRole);
+                    recentDocuments = await DocumentService.GetListForCurrentUserAsync(userId);
 
                     // Calculate stats
                     CalculateStats();
